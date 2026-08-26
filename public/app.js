@@ -4,6 +4,7 @@
 
 const DB_KEY = "skm_flow_complete_v16";
 const BACKEND_API_ENDPOINT = "/api/data";
+const SESSION_KEY = "erp_active_user_session";
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 
@@ -47,7 +48,6 @@ function defaultDB() {
         settings: "সেটিংস ও ব্যাকআপ"
       }
     },
-    currentUser: { id: 1, name: "Super Admin", username: "admin", role: "Admin", permissions: { orderCreate: true, orderEdit: true, productDelete: true, accountingAccess: true }, twoFactor: false },
     users: [
       { id: 1, name: "Super Admin", username: "admin", password: "123", role: "Admin", permissions: { orderCreate: true, orderEdit: true, productDelete: true, accountingAccess: true }, twoFactor: false },
       { id: 2, name: "Tanvir (Sales)", username: "sales", password: "123", role: "Sales Staff", permissions: { orderCreate: true, orderEdit: true, productDelete: false, accountingAccess: false }, twoFactor: false },
@@ -739,15 +739,26 @@ document.querySelectorAll("#courier-sub-tabs .tab").forEach(t => {
 });
 
 /* =======================================================================
-   SECURITY, AUTH & RBAC PERMISSIONS
+   STRICT PER-DEVICE AUTHENTICATION & LOGIN ENFORCEMENT
 ======================================================================= */
+function getActiveUser() {
+  const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+  if (raw) {
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
+  return null;
+}
+
 function checkAuthSession() {
-  if (!DB.currentUser) {
-    document.getElementById("auth-overlay").style.display = "flex";
+  const currentUser = getActiveUser();
+  const overlay = document.getElementById("auth-overlay");
+
+  if (!currentUser) {
+    if (overlay) overlay.style.display = "flex";
   } else {
-    document.getElementById("auth-overlay").style.display = "none";
-    document.getElementById("current-user-name").textContent = DB.currentUser.name;
-    document.getElementById("current-user-role").textContent = DB.currentUser.role;
+    if (overlay) overlay.style.display = "none";
+    document.getElementById("current-user-name").textContent = currentUser.name;
+    document.getElementById("current-user-role").textContent = currentUser.role;
     enforceRoleAccessPermissions();
   }
 }
@@ -755,33 +766,36 @@ function checkAuthSession() {
 function attemptLogin() {
   const u = document.getElementById("login-username").value.trim();
   const p = document.getElementById("login-password").value.trim();
-  const found = DB.users.find(x => x.username.toLowerCase() === u.toLowerCase() && x.password === p);
+  const found = (DB.users || []).find(x => x.username.toLowerCase() === u.toLowerCase() && x.password === p);
 
   if (found) {
     if (found.twoFactor) {
-      const code = prompt("2FA Verification: 6-digit OTP প্রদান করুন (Default: 123456):");
+      const code = prompt("2FA Verification: 6-digit OTP দিন (Default: 123456):");
       if (code !== "123456") { alert("ভুল 2FA ওটিপি!"); return; }
     }
-    DB.currentUser = found;
-    saveDB();
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(found));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(found));
+    
     logActivity("Login", `User ${found.name} logged in`);
     checkAuthSession();
     renderAll();
     toast(`স্বাগতম, ${found.name}`);
   } else {
-    alert("ভুল ইউজারনেম বা পাসওয়ার্ড!");
+    alert("ভুল ইউজারনেম অথবা পাসওয়ার্ড!");
   }
 }
 
 function logoutUser() {
-  logActivity("Logout", `User ${DB.currentUser ? DB.currentUser.name : "Staff"} logged out`);
-  DB.currentUser = null;
-  saveDB();
+  const currentUser = getActiveUser();
+  logActivity("Logout", `User ${currentUser ? currentUser.name : "Staff"} logged out`);
+  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
   checkAuthSession();
+  toast("সফলভাবে লগআউট হয়েছেন");
 }
 
 function enforceRoleAccessPermissions() {
-  const user = DB.currentUser;
+  const user = getActiveUser();
   if (!user) return;
   const perms = user.permissions || {};
 
@@ -862,26 +876,30 @@ function deleteUser(id) {
 }
 
 function openProfileSecurityModal() {
+  const currentUser = getActiveUser();
   document.getElementById("sec-old-pass").value = "";
   document.getElementById("sec-new-pass").value = "";
-  document.getElementById("sec-2fa-toggle").checked = DB.currentUser ? !!DB.currentUser.twoFactor : false;
+  document.getElementById("sec-2fa-toggle").checked = currentUser ? !!currentUser.twoFactor : false;
   openModal("modal-security");
 }
 
 function saveUserSecurity() {
+  const currentUser = getActiveUser();
   const oldP = document.getElementById("sec-old-pass").value.trim();
   const newP = document.getElementById("sec-new-pass").value.trim();
-  if (DB.currentUser && oldP && newP) {
-    if (DB.currentUser.password !== oldP) { toast("পুরাতন পাসওয়ার্ড মেলেনি!"); return; }
-    DB.currentUser.password = newP;
-    const u = DB.users.find(x => x.id === DB.currentUser.id);
+  if (currentUser && oldP && newP) {
+    if (currentUser.password !== oldP) { toast("পুরাতন পাসওয়ার্ড মেলেনি!"); return; }
+    currentUser.password = newP;
+    const u = DB.users.find(x => x.id === currentUser.id);
     if (u) {
       u.password = newP;
       u.twoFactor = document.getElementById("sec-2fa-toggle").checked;
     }
-    DB.currentUser.twoFactor = document.getElementById("sec-2fa-toggle").checked;
+    currentUser.twoFactor = document.getElementById("sec-2fa-toggle").checked;
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
     saveDB(); closeModal("modal-security");
-    logActivity("Security", `User ${DB.currentUser.name} updated security credentials`);
+    logActivity("Security", `User ${currentUser.name} updated security credentials`);
     toast("পাসওয়ার্ড ও সিকিউরিটি সফলভাবে আপডেট হয়েছে");
   }
 }
@@ -890,13 +908,14 @@ function saveUserSecurity() {
    AUDIT & ACTIVITY LOGGER
 ======================================================================= */
 function logActivity(category, description) {
+  const currentUser = getActiveUser();
   const now = new Date();
   const timeStr = now.toLocaleDateString('en-GB') + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   DB.activityLogs = DB.activityLogs || [];
   DB.activityLogs.unshift({
     id: Date.now(),
     timestamp: timeStr,
-    user: DB.currentUser ? DB.currentUser.name : "Admin",
+    user: currentUser ? currentUser.name : "Admin",
     category,
     description
   });
@@ -917,7 +936,8 @@ function renderActivityLogs() {
 }
 
 function clearActivityLogs() {
-  if (DB.currentUser && DB.currentUser.role !== "Admin") { toast("শুধুমাত্র অ্যাডমিন হিস্টোরি মুছে ফেলতে পারবেন"); return; }
+  const currentUser = getActiveUser();
+  if (currentUser && currentUser.role !== "Admin") { toast("শুধুমাত্র অ্যাডমিন হিস্টোরি মুছে ফেলতে পারবেন"); return; }
   if (confirm("Clear all activity logs?")) {
     DB.activityLogs = [];
     saveDB();
@@ -1773,7 +1793,8 @@ document.getElementById("btn-save-product").addEventListener("click", () => {
 });
 
 function deleteProduct(id) {
-  if (DB.currentUser && DB.currentUser.permissions && !DB.currentUser.permissions.productDelete) {
+  const currentUser = getActiveUser();
+  if (currentUser && currentUser.permissions && !currentUser.permissions.productDelete) {
     toast("আপনার প্রোডাক্ট মুছে ফেলার পারমিশন নেই ❌");
     return;
   }
@@ -1953,7 +1974,8 @@ function renderCartTable() {
 }
 
 function openNewOrderModal() {
-  if (DB.currentUser && DB.currentUser.permissions && !DB.currentUser.permissions.orderCreate) {
+  const currentUser = getActiveUser();
+  if (currentUser && currentUser.permissions && !currentUser.permissions.orderCreate) {
     toast("আপনার অর্ডার তৈরির পারমিশন নেই ❌"); return;
   }
   editingOrderId = null;
@@ -2040,8 +2062,9 @@ document.getElementById("btn-save-order").addEventListener("click", () => {
   data.grandTotal = data.subtotal + data.delivery - data.discount;
   data.due = Math.max(0, data.grandTotal - data.advance);
 
+  const currentUser = getActiveUser();
   if (editingOrderId) {
-    if (DB.currentUser && DB.currentUser.permissions && !DB.currentUser.permissions.orderEdit) {
+    if (currentUser && currentUser.permissions && !currentUser.permissions.orderEdit) {
       toast("আপনার অর্ডার এডিটের পারমিশন নেই ❌"); return;
     }
     const idx = DB.orders.findIndex(x => x.id === editingOrderId);
@@ -2064,7 +2087,8 @@ document.getElementById("btn-save-order").addEventListener("click", () => {
 });
 
 function quickStatus(id, st) {
-  if (DB.currentUser && DB.currentUser.permissions && !DB.currentUser.permissions.orderEdit) {
+  const currentUser = getActiveUser();
+  if (currentUser && currentUser.permissions && !currentUser.permissions.orderEdit) {
     toast("আপনার স্ট্যাটাস পরিবর্তনের পারমিশন নেই ❌"); return;
   }
   const o = DB.orders.find(x => x.id === id);
@@ -2165,7 +2189,8 @@ function renderOrders() {
 }
 
 function deleteOrder(id) {
-  if (DB.currentUser && DB.currentUser.permissions && !DB.currentUser.permissions.orderEdit) {
+  const currentUser = getActiveUser();
+  if (currentUser && currentUser.permissions && !currentUser.permissions.orderEdit) {
     toast("আপনার অর্ডার মুছে ফেলার পারমিশন নেই ❌"); return;
   }
   if (!confirm("অর্ডার মুছে ফেলবেন?")) return;
