@@ -844,16 +844,33 @@ function logoutUser() {
   toast("সফলভাবে লগআউট হয়েছেন");
 }
 
+/* =======================================================================
+   STRICT ROLE ACCESS CONTROL & FINANCIAL PRIVACY
+======================================================================= */
 function enforceRoleAccessPermissions() {
   const user = getActiveUser();
   if (!user) return;
   const perms = user.permissions || {};
+  const isAdmin = user.role === "Admin" || user.name === "Super Admin";
 
+  // একাউন্টিং শুধু অ্যাডমিন বা একাউন্টেন্ট দেখতে পারবে
   document.querySelectorAll("[data-perm='accounting']").forEach(el => {
-    el.style.display = perms.accountingAccess || user.role === "Admin" ? "flex" : "none";
+    el.style.display = perms.accountingAccess || isAdmin ? "flex" : "none";
   });
+
+  // স্টাফ ও পারমিশন শুধু অ্যাডমিন দেখতে পারবে[cite: 7]
   document.querySelectorAll("[data-perm='users']").forEach(el => {
-    el.style.display = user.role === "Admin" ? "flex" : "none";
+    el.style.display = isAdmin ? "flex" : "none";
+  });
+
+  // পাইকারি (Wholesale) শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে পারবে[cite: 7]
+  document.querySelectorAll("[data-perm='wholesale']").forEach(el => {
+    el.style.display = isAdmin ? "flex" : "none";
+  });
+
+  // প্রোডাক্টের মোট স্টক ভ্যালু ও পাইকারি ক্রয়মূল্য শুধু অ্যাডমিন দেখবে[cite: 7]
+  document.querySelectorAll(".admin-only-financial").forEach(el => {
+    el.style.display = isAdmin ? "" : "none";
   });
 }
 
@@ -1870,7 +1887,10 @@ function deleteProduct(id) {
 function renderProducts() {
   const tbody = document.getElementById("product-table-body");
   if (!tbody) return;
-  
+
+  const currentUser = getActiveUser();
+  const isAdmin = currentUser && (currentUser.role === "Admin" || currentUser.name === "Super Admin");
+
   let totalStockQty = 0;
   let totalStockVal = 0;
   DB.products.forEach(p => {
@@ -1881,6 +1901,11 @@ function renderProducts() {
 
   document.getElementById("prod-total-items").textContent = DB.products.length;
   document.getElementById("prod-total-stock-qty").textContent = `${totalStockQty} pcs`;
+  
+  const valCard = document.getElementById("prod-stock-val-card");
+  if (valCard) {
+    valCard.style.display = isAdmin ? "block" : "none";
+  }
   document.getElementById("prod-total-stock-val").textContent = money(totalStockVal);
 
   tbody.innerHTML = DB.products.map(p => {
@@ -1897,11 +1922,11 @@ function renderProducts() {
         <td><b>${p.name}</b></td>
         <td class="mono muted">${p.sku || "—"}</td>
         <td style="font-size:11px">${batchInfo}</td>
-        <td class="num mono text-amber-600"><b>${money(fifoCost)}</b></td>
+        ${isAdmin ? `<td class="num mono text-amber-600"><b>${money(fifoCost)}</b></td>` : ``}
         <td class="num mono">${money(p.sellPrice)}</td>
-        <td class="num mono"><b>${p.stock}</b></td>
+        <td class="num mono font-bold"><b>${p.stock}</b></td>
         <td class="num mono muted">${limit} pcs</td>
-        <td class="num mono text-blue-600"><b>${money(fifoCost * p.stock)}</b></td>
+        ${isAdmin ? `<td class="num mono text-blue-600"><b>${money(fifoCost * p.stock)}</b></td>` : ``}
         <td>${stockBadge}</td>
         <td>
           <button class="btn ghost sm" onclick="editProduct(${p.id})">Edit</button>
@@ -1909,6 +1934,11 @@ function renderProducts() {
         </td>
       </tr>`;
   }).join("");
+
+  // টেবিল হেডার হাইড/শো হ্যান্ডলিং[cite: 7]
+  document.querySelectorAll(".admin-only-financial").forEach(el => {
+    el.style.display = isAdmin ? "" : "none";
+  });
 }
 
 /* =======================================================================
