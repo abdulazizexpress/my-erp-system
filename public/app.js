@@ -11,10 +11,10 @@ function todayStr() { return new Date().toISOString().slice(0, 10); }
 function defaultDB() {
   return {
     settings: {
-      appName: "SKM Flow",
+      appName: "Noorish ERP",
       appSub: "Enterprise Business Suite",
       logoBase64: "",
-      shopName: "SkinCare Haven BD",
+      shopName: "Noorish Enterprise",
       phone: "01700000000",
       address: "Dhaka, Bangladesh",
       currency: "৳",
@@ -1230,11 +1230,11 @@ function applyTheme() {
 function applyBranding() {
   const s = DB.settings;
   const els = {
-    "display-app-name": s.appName || "SKM Flow",
-    "sidebar-app-name": s.appName || "SKM Flow",
-    "auth-app-name": s.appName || "SKM Flow",
+    "display-app-name": s.appName || "Noorish ERP",
+    "sidebar-app-name": s.appName || "Noorish ERP",
+    "auth-app-name": s.appName || "Noorish ERP",
     "display-app-sub": s.appSub || "Business Suite",
-    "page-head-title": `${s.appName || 'SKM Flow'} — Enterprise Suite`
+    "page-head-title": `${s.appName || 'Noorish ERP'} — Enterprise Suite`
   };
   for (let id in els) {
     const el = document.getElementById(id);
