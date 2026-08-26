@@ -121,7 +121,7 @@
     <a class="nav-item" data-view="orders"><span class="ic"><i class="fa-solid fa-box-open"></i></span> <span id="nav-label-orders">অর্ডার ও পার্সেল</span></a>
     <a class="nav-item" data-view="couriers"><span class="ic"><i class="fa-solid fa-truck-fast"></i></span> <span id="nav-label-couriers">কুরিয়ার ও COD</span></a>
     <a class="nav-item" data-view="fraud-checker"><span class="ic"><i class="fa-solid fa-shield-halved text-rose-600"></i></span> <span id="nav-label-fraud-checker">Fraud Checker (API)</span></a>
-    <a class="nav-item" data-view="wholesale"><span class="ic"><i class="fa-solid fa-truck-ramp-box"></i></span> <span id="nav-label-wholesale">পাইকারি (Wholesale)</span></a>
+    <a class="nav-item" data-view="wholesale" data-perm="wholesale"><span class="ic"><i class="fa-solid fa-truck-ramp-box"></i></span> <span id="nav-label-wholesale">পাইকারি (Wholesale)</span></a>
     <a class="nav-item" data-view="products"><span class="ic"><i class="fa-solid fa-tags"></i></span> <span id="nav-label-products">প্রোডাক্ট ও ব্যাচ</span></a>
     <a class="nav-item" data-view="packaging"><span class="ic"><i class="fa-solid fa-boxes-stacked"></i></span> <span id="nav-label-packaging">প্যাকেজিং উপাদান</span></a>
     <a class="nav-item" data-view="accounting" data-perm="accounting"><span class="ic"><i class="fa-solid fa-calculator"></i></span> <span id="nav-label-accounting">Accounting</span></a>
@@ -437,7 +437,7 @@
       <div class="grid g-3" style="margin-bottom:14px">
         <div class="card stat stat-blue"><div class="label">মোট আইটেম ভ্যারাইটি</div><div class="value" id="prod-total-items">0</div><div class="stub">🏷️</div></div>
         <div class="card stat stat-amber"><div class="label">মোট স্টক কোয়ান্টিটি</div><div class="value" id="prod-total-stock-qty">0 pcs</div><div class="stub">📦</div></div>
-        <div class="card stat stat-green"><div class="label">TOTAL STOCK VALUE</div><div class="value" id="prod-total-stock-val">৳0</div><div class="stub">💰</div></div>
+        <div class="card stat stat-green admin-only-financial" id="prod-stock-val-card"><div class="label">TOTAL STOCK VALUE</div><div class="value" id="prod-total-stock-val">৳0</div><div class="stub">💰</div></div>
       </div>
 
       <div class="tbl-wrap">
@@ -447,11 +447,11 @@
               <th>Product Name</th>
               <th>SKU / Barcode</th>
               <th>Batches / Expiry</th>
-              <th class="num">Unit Cost (FIFO)</th>
+              <th class="num admin-only-financial">Unit Cost (FIFO)</th>
               <th class="num">Sale Price</th>
               <th class="num">Stock</th>
               <th class="num">Alert Limit</th>
-              <th class="num">Stock Value</th>
+              <th class="num admin-only-financial">Stock Value</th>
               <th>Status / Alert</th>
               <th>Action</th>
             </tr>
