@@ -13,7 +13,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(__dirname));
 
-// ডাটাবেজ ফাইল ইনিশিয়ালাইজেশন
+// ডাটাবেজ ফাইল ইনিশিয়ালাইজেশন
 if (!fs.existsSync(DB_FILE)) {
   fs.writeFileSync(DB_FILE, JSON.stringify({}));
 }
@@ -24,7 +24,7 @@ app.get("/", (req, res) => {
   const rootPath = path.join(__dirname, "index.html");
   if (fs.existsSync(publicPath)) res.sendFile(publicPath);
   else if (fs.existsSync(rootPath)) res.sendFile(rootPath);
-  else res.send("<h2>index.html পাওয়া যায়নি</h2>");
+  else res.send("<h2>index.html পাওয়া যায়নি</h2>");
 });
 
 // Continuous Data Read
@@ -83,6 +83,7 @@ app.post("/api/check-fraud-proxy", (req, res) => {
   proxyReq.end();
 });
 
-app.listen(PORT, () => {
+// Render Port Binding with 0.0.0.0 Host
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running at port: ${PORT}`);
 });
