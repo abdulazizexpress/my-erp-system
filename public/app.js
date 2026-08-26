@@ -905,7 +905,7 @@ function saveUserSecurity() {
 }
 
 /* =======================================================================
-   AUDIT & ACTIVITY LOGGER
+   AUDIT & ACTIVITY LOGGER (INDIVIDUAL ITEM DELETE BY ADMIN ONLY)
 ======================================================================= */
 function logActivity(category, description) {
   const currentUser = getActiveUser();
@@ -913,7 +913,7 @@ function logActivity(category, description) {
   const timeStr = now.toLocaleDateString('en-GB') + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   DB.activityLogs = DB.activityLogs || [];
   DB.activityLogs.unshift({
-    id: Date.now(),
+    id: Date.now() + Math.floor(Math.random() * 1000),
     timestamp: timeStr,
     user: currentUser ? currentUser.name : "Admin",
     category,
@@ -925,24 +925,36 @@ function logActivity(category, description) {
 function renderActivityLogs() {
   const tbody = document.getElementById("activity-log-body");
   if (!tbody) return;
+
+  const currentUser = getActiveUser();
+  const isAdmin = currentUser && (currentUser.role === "Admin" || currentUser.name === "Super Admin");
+
   tbody.innerHTML = (DB.activityLogs && DB.activityLogs.length) ? DB.activityLogs.map(l => `
     <tr>
       <td class="mono muted">${l.timestamp}</td>
       <td><b>${l.user}</b></td>
       <td><span class="badge b-pending">${l.category}</span></td>
       <td>${l.description}</td>
+      <td style="text-align:center">
+        ${isAdmin ? `<button class="btn danger sm" onclick="deleteSingleActivityLog(${l.id})" title="Delete this record">✕</button>` : `<span class="muted" style="font-size:11px">—</span>`}
+      </td>
     </tr>
-  `).join("") : `<tr><td colspan="4" class="tbl-empty">No activity records found</td></tr>`;
+  `).join("") : `<tr><td colspan="5" class="tbl-empty">No activity records found</td></tr>`;
 }
 
-function clearActivityLogs() {
+function deleteSingleActivityLog(id) {
   const currentUser = getActiveUser();
-  if (currentUser && currentUser.role !== "Admin") { toast("শুধুমাত্র অ্যাডমিন হিস্টোরি মুছে ফেলতে পারবেন"); return; }
-  if (confirm("Clear all activity logs?")) {
-    DB.activityLogs = [];
+  // সুপার এডমিন বা Admin ছাড়া কেউ ডিলিট করতে পারবে না
+  if (!currentUser || (currentUser.role !== "Admin" && currentUser.name !== "Super Admin")) {
+    toast("⚠️ দুঃখিত, শুধুমাত্র সুপার এডমিন হিস্টোরি মুছে ফেলতে পারবেন!");
+    return;
+  }
+
+  if (confirm("আপনি কি এই নির্দিষ্ট হিস্টোরি রেকর্ডটি মুছে ফেলতে চান?")) {
+    DB.activityLogs = (DB.activityLogs || []).filter(l => l.id !== id);
     saveDB();
     renderActivityLogs();
-    toast("Activity logs cleared");
+    toast("রেকর্ডটি সফলভাবে মুছে ফেলা হয়েছে");
   }
 }
 
