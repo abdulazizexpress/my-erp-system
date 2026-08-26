@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="page-head-title">SKM Flow — Ultimate Enterprise ERP Suite</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <!-- HTML5 QR / Barcode Camera Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body class="light-mode">
+
+<!-- Authentication Screen Overlay (Session Security) -->
+<div id="auth-overlay" class="auth-overlay" style="display:none;">
+  <div class="auth-card card">
+    <div class="brand-display" style="justify-content:center; margin-bottom:14px;">
+      <div class="brand-logo-wrap"><div class="mark" id="auth-logo-fallback">S</div></div>
+      <div class="brand-text">
+        <span class="name" id="auth-app-name">SKM Flow</span>
+        <span class="sub">Security & Login Portal</span>
+      </div>
+    </div>
+    <div id="auth-login-view">
+      <div class="field"><label>Username</label><input type="text" id="login-username" placeholder="e.g. admin"></div>
+      <div class="field"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <button class="btn" style="width:100%; margin-top:8px" onclick="attemptLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- Top Navigation & Global Header Bar -->
+<header class="app-header">
+  <div class="header-left">
+    <button id="btn-open-sidebar" class="mobile-toggle-btn" aria-label="Open Menu">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="brand-display">
+      <div id="brand-logo-container" class="brand-logo-wrap">
+        <div class="mark" id="brand-avatar-fallback">S</div>
+      </div>
+      <div class="brand-text">
+        <span class="name" id="display-app-name">SKM Flow</span>
+        <span class="sub" id="display-app-sub">Enterprise Suite</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Omni-Search Bar -->
+  <div class="header-center">
+    <div class="omni-search-wrapper">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <input type="text" id="global-omni-search" placeholder="গ্লোবাল সার্চ: পণ্য, SKU, ব্যাচ, অর্ডার, কাস্টমার, ট্র্যাকিং..." oninput="handleGlobalSearch(this.value)">
+      <div id="global-search-results" class="search-dropdown-results" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Header Right Actions & Notifications -->
+  <div class="header-right">
+    <button class="icon-action-btn" onclick="openCameraScanner('global')" title="Scan Barcode / SKU"><i class="fa-solid fa-barcode"></i></button>
+    <div class="user-pill-badge" id="current-user-badge">
+      <i class="fa-solid fa-user-shield"></i> <span id="current-user-name">Admin</span> (<span id="current-user-role" class="muted">Admin</span>)
+    </div>
+    <button class="icon-action-btn" onclick="openProfileSecurityModal()" title="Security & Password"><i class="fa-solid fa-key"></i></button>
+    <button class="icon-action-btn" onclick="logoutUser()" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+    <button class="icon-action-btn" id="btn-theme-toggle" onclick="toggleTheme()" title="ডার্ক/লাইট মোড"><i class="fa-solid fa-moon" id="theme-icon"></i></button>
+
+    <div class="notification-dropdown-wrap">
+      <button class="icon-action-btn" id="btn-notif-toggle" onclick="toggleNotificationCenter()" title="নোটিফিকেশন সেন্টার">
+        <i class="fa-solid fa-bell"></i>
+        <span class="notif-badge" id="notif-count-badge" style="display:none">0</span>
+      </button>
+      <div id="notification-center-box" class="notification-dropdown-box" style="display:none">
+        <div class="notif-header">
+          <span><b>Alerts & Auto-Reminders</b></span>
+          <span class="muted" id="notif-total-text" style="font-size:11px">0 Alerts</span>
+        </div>
+        <div class="notif-body" id="notif-items-list"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="app-sidebar">
+    <div class="brand-sidebar-header">
+      <div class="brand-text">
+        <span class="name" id="sidebar-app-name">SKM Flow</span>
+      </div>
+      <button id="btn-close-sidebar" class="sidebar-close-btn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    
+    <a class="nav-item active" data-view="dashboard"><span class="ic"><i class="fa-solid fa-chart-pie"></i></span> <span id="nav-label-dashboard">ড্যাশবোর্ড</span></a>
+    <a class="nav-item" data-view="orders"><span class="ic"><i class="fa-solid fa-box-open"></i></span> <span id="nav-label-orders">অর্ডার ও পার্সেল</span></a>
+    <a class="nav-item" data-view="couriers"><span class="ic"><i class="fa-solid fa-truck-fast"></i></span> <span id="nav-label-couriers">কুরিয়ার ও COD</span></a>
+    <a class="nav-item" data-view="fraud-checker"><span class="ic"><i class="fa-solid fa-shield-halved text-rose-600"></i></span> <span id="nav-label-fraud-checker">Fraud Checker (API)</span></a>
+    <a class="nav-item" data-view="wholesale"><span class="ic"><i class="fa-solid fa-truck-ramp-box"></i></span> <span id="nav-label-wholesale">পাইকারি (Wholesale)</span></a>
+    <a class="nav-item" data-view="products"><span class="ic"><i class="fa-solid fa-tags"></i></span> <span id="nav-label-products">প্রোডাক্ট ও ব্যাচ</span></a>
+    <a class="nav-item" data-view="packaging"><span class="ic"><i class="fa-solid fa-boxes-stacked"></i></span> <span id="nav-label-packaging">প্যাকেজিং উপাদান</span></a>
+    <a class="nav-item" data-view="accounting" data-perm="accounting"><span class="ic"><i class="fa-solid fa-calculator"></i></span> <span id="nav-label-accounting">Accounting</span></a>
+    <a class="nav-item" data-view="customers"><span class="ic"><i class="fa-solid fa-users"></i></span> <span id="nav-label-customers">কাস্টমার ও ফ্রড মিটার</span></a>
+    <a class="nav-item" data-view="users" data-perm="users"><span class="ic"><i class="fa-solid fa-user-gear"></i></span> <span id="nav-label-users">স্টাফ ও পারমিশন</span></a>
+    <a class="nav-item" data-view="reports"><span class="ic"><i class="fa-solid fa-chart-line"></i></span> <span id="nav-label-reports">Reports</span></a>
+    <a class="nav-item" data-view="activity"><span class="ic"><i class="fa-solid fa-clock-rotate-left"></i></span> <span id="nav-label-activity">Activity Log</span></a>
+    <a class="nav-item" data-view="settings"><span class="ic"><i class="fa-solid fa-gear"></i></span> <span id="nav-label-settings">সেটিংস ও ব্যাকআপ</span></a>
+    
+    <div class="sidebar-foot">
+      Enterprise Auto-Engine সক্রিয়।
+    </div>
+  </aside>
+
+  <!-- MAIN VIEW CONTAINER -->
+  <main class="main">
+
+    <!-- 1. DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-dashboard">Dashboard</h1>
+          <div class="desc" id="dash-range-label">Financial summary: Real-time P&L Overview</div>
+        </div>
+        
+        <div class="date-filter-group">
+          <div class="period-switch" id="dash-period">
+            <button data-p="today">Today</button>
+            <button data-p="7days">7 Days</button>
+            <button data-p="30days" class="active">30 Days</button>
+            <button data-p="custom">Custom</button>
+            <button data-p="all">All Time</button>
+          </div>
+          <div id="custom-date-container" style="display:none;" class="custom-date-row">
+            <input type="date" id="dash-start-date" class="date-inp">
+            <span style="font-size:11px; color:var(--ink-soft)">to</span>
+            <input type="date" id="dash-end-date" class="date-inp">
+            <button class="btn sm" onclick="renderDashboard()">Apply</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-actions-bar">
+        <span class="quick-act-label"><b>Quick Actions:</b></span>
+        <button class="btn sm" onclick="openNewOrderModal()"><i class="fa-solid fa-plus"></i> New Order</button>
+        <button class="btn sm ghost" onclick="navigateToView('fraud-checker')"><i class="fa-solid fa-shield-halved"></i> Live Fraud Checker</button>
+        <button class="btn sm ghost" onclick="openWholesaleModal()"><i class="fa-solid fa-truck-ramp-box"></i> Wholesale Sale</button>
+        <button class="btn sm ghost" onclick="openNewProductModal()"><i class="fa-solid fa-tag"></i> Add Product</button>
+        <button class="btn sm ghost" onclick="openPurchaseModal()"><i class="fa-solid fa-cart-shopping"></i> Add Purchase</button>
+        <button class="btn sm ghost" onclick="openExpenseModal()"><i class="fa-solid fa-receipt"></i> Add Expense</button>
+      </div>
+
+      <div class="grid g-4">
+        <div class="card stat stat-green">
+          <div class="label">মোট বিক্রয় (Revenue)</div>
+          <div class="value" id="stat-revenue">৳0</div>
+          <div class="stub">৳</div>
+        </div>
+        <div class="card stat stat-blue">
+          <div class="label">পণ্যের ক্রয়মূল্য (COGS)</div>
+          <div class="value" id="stat-cogs">৳0</div>
+          <div class="stub">📦</div>
+        </div>
+        <div class="card stat stat-orange">
+          <div class="label">মোট খরচ (Expenses + লজিস্টিক)</div>
+          <div class="value" id="stat-exp">৳0</div>
+          <div class="stub">💸</div>
+        </div>
+        <div class="card stat stat-green" id="stat-profit-card">
+          <div class="label">স্বয়ংক্রিয় নিট মুনাফা (Net Profit)</div>
+          <div class="value" id="stat-profit">৳0</div>
+          <div class="stub">📈</div>
+        </div>
+      </div>
+
+      <div class="section-title">Order Status Journey</div>
+      <div class="grid g-5" id="dash-status-grid"></div>
+
+      <div class="section-title">Recent Orders</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice / Date</th>
+              <th>Customer</th>
+              <th>Tracking ID</th>
+              <th>Courier</th>
+              <th>Status</th>
+              <th class="num">Amount</th>
+            </tr>
+          </thead>
+          <tbody id="dash-recent"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 2. COURIER MANAGEMENT & COD RECONCILIATION -->
+    <section class="view" id="view-couriers">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-couriers">🚚 Courier Performance & COD Reconciliation</h1>
+          <div class="desc">Courier API Sync, COD Statement Audit & Live Tracking URLs</div>
+        </div>
+        <div class="row">
+          <button class="btn ghost" onclick="syncLiveCourierAPI()"><i class="fa-solid fa-arrows-rotate"></i> Sync Courier API</button>
+          <button class="btn" onclick="openCODReconciliationModal()"><i class="fa-solid fa-file-invoice-dollar"></i> COD Reconciliation</button>
+        </div>
+      </div>
+
+      <div class="grid g-4" style="margin-bottom:14px" id="courier-kpi-cards"></div>
+
+      <div class="tabs" id="courier-sub-tabs">
+        <div class="tab active" data-csub="performance">Performance Audit</div>
+        <div class="tab" data-csub="reconciliation">COD Settlement Ledger</div>
+      </div>
+
+      <div id="courier-sub-performance">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Courier Service</th>
+                <th class="num">Booked Orders</th>
+                <th class="num text-emerald-600">Delivered</th>
+                <th class="num text-rose-600">Cancelled</th>
+                <th class="num text-rose-600">Returned</th>
+                <th class="num">Success Rate</th>
+                <th class="num">Courier Cost (৳)</th>
+                <th class="num">COD Volume (৳)</th>
+              </tr>
+            </thead>
+            <tbody id="courier-perf-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="courier-sub-reconciliation" style="display:none">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Settlement Date</th>
+                <th>Courier</th>
+                <th>Batch / Reference</th>
+                <th class="num">Orders Count</th>
+                <th class="num">Total COD</th>
+                <th class="num text-rose-600">Service Deductions</th>
+                <th class="num text-emerald-600">Net Received</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="cod-reconciliation-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW SECTION: LIVE FRAUD CHECKER (API) -->
+    <section class="view" id="view-fraud-checker">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-fraud-checker"><i class="fa-solid fa-shield-halved text-rose-600"></i> Live Courier & Delivery Fraud Checker</h1>
+          <div class="desc">সকল কুরিয়ারের হিস্টোরি থেকে কাস্টমারের রিয়েল-টাইম ডেলিভারি সাকসেস ও রিটার্ন রেট যাচাই করুন</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px; background:var(--surface);">
+        <h3 style="margin-bottom:10px; font-size:14px;"><i class="fa-solid fa-magnifying-glass"></i> কাস্টমার নম্বর চেক করুন</h3>
+        <div class="row" style="align-items:flex-end;">
+          <div class="field" style="flex:2; min-width:260px;">
+            <label>মোবাইল নম্বর (১১ ডিজিট)</label>
+            <input type="text" id="fraud-search-phone" placeholder="017XXXXXXXX" style="font-size:15px; font-weight:700;">
+          </div>
+          <div class="field" style="flex:0;">
+            <button class="btn" style="height:36px; padding:0 20px;" onclick="runManualFraudCheck()"><i class="fa-solid fa-bolt"></i> Check Fraud Score</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Result Display Container -->
+      <div id="fraud-result-container" style="display:none;"></div>
+    </section>
+
+    <!-- 3. ORDERS -->
+    <section class="view" id="view-orders">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-orders">অর্ডার ও পার্সেল লিস্ট</h1>
+          <div class="desc">One-Click WhatsApp Notification, Bulk Sticker/Invoice Print & Tracking</div>
+        </div>
+        <div class="row">
+          <button class="btn ghost sm" onclick="bulkPrint('sticker')"><i class="fa-solid fa-print"></i> Bulk 3×3 Stickers</button>
+          <button class="btn ghost sm" onclick="bulkPrint('invoice')"><i class="fa-solid fa-file-pdf"></i> Bulk Invoices</button>
+          <button class="btn ghost" onclick="document.getElementById('file-import-csv').click()">📥 Import CSV</button>
+          <input type="file" id="file-import-csv" accept=".csv" style="display:none" onchange="handleOrderCSVImport(event)">
+          <button class="btn ghost" onclick="exportOrdersToCSV()">📊 Export CSV</button>
+          <button class="btn" onclick="openNewOrderModal()">+ New Order</button>
+        </div>
+      </div>
+
+      <div class="grid g-4" style="margin-bottom:14px">
+        <div class="card stat stat-blue"><div class="label">মোট বুকড পার্সেল</div><div class="value" id="ord-met-total">0</div><div class="stub">📦</div></div>
+        <div class="card stat stat-green"><div class="label">ডেলিভার্ড সম্পূর্ণ</div><div class="value" id="ord-met-delivered">0</div><div class="stub">✅</div></div>
+        <div class="card stat stat-amber"><div class="label">পেন্ডিং / ট্রানজিট</div><div class="value" id="ord-met-pending">0</div><div class="stub">🚚</div></div>
+        <div class="card stat stat-red"><div class="label">রিটার্ন / বাতিল</div><div class="value" id="ord-met-returned">0</div><div class="stub">❌</div></div>
+      </div>
+
+      <div class="tabs" id="order-tabs">
+        <div class="tab active" data-s="all">All</div>
+        <div class="tab" data-s="pending">Pending</div>
+        <div class="tab" data-s="shipped">Shipped</div>
+        <div class="tab" data-s="delivered">Delivered</div>
+        <div class="tab" data-s="returned">Returned</div>
+        <div class="tab" data-s="cancelled">Cancelled</div>
+      </div>
+
+      <div class="toolbar">
+        <div class="row" style="align-items:center;">
+          <input class="search" id="order-search" placeholder="নাম, ফোন, ইনভয়েস বা ট্র্যাকিং নম্বর দিয়ে খুঁজুন...">
+          <button class="btn sm ghost" onclick="selectAllOrders(true)">Select All</button>
+          <button class="btn sm ghost" onclick="selectAllOrders(false)">Clear Selection</button>
+        </div>
+        <span class="muted mono" id="order-count">0 Orders</span>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:28px"><input type="checkbox" id="chk-select-all-orders" onchange="toggleSelectAllRows(this)"></th>
+              <th>Invoice / Date</th>
+              <th>Customer / Phone</th>
+              <th>Items & Qty (Packaging Preview)</th>
+              <th>Tracking ID</th>
+              <th>Courier</th>
+              <th class="num">Grand Total</th>
+              <th class="num">COGS</th>
+              <th>Status</th>
+              <th style="text-align:center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="order-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. WHOLESALE -->
+    <section class="view" id="view-wholesale">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-wholesale">পাইকারি সেলস ও ডেলিভারি লেজার</h1>
+          <div class="desc">Due Balance Reminder, Editable Status & Product Details</div>
+        </div>
+        <button class="btn" onclick="openWholesaleModal()">+ New Wholesale Order</button>
+      </div>
+
+      <div class="grid g-4" style="margin-bottom:14px">
+        <div class="card stat stat-purple"><div class="label">পাইকারি মোট বিক্রয়</div><div class="value" id="ws-stat-total">৳0</div><div class="stub">💼</div></div>
+        <div class="card stat stat-green"><div class="label">মোট আদায় (Paid)</div><div class="value" id="ws-stat-paid">৳0</div><div class="stub">💵</div></div>
+        <div class="card stat stat-red"><div class="label">পাইকারি বাকি (Due Balance)</div><div class="value" id="ws-stat-due">৳0</div><div class="stub">⏳</div></div>
+        <div class="card stat stat-teal"><div class="label">পাইকারি নিট প্রফিট</div><div class="value" id="ws-stat-profit">৳0</div><div class="stub">📈</div></div>
+      </div>
+
+      <div class="tabs" id="ws-tabs">
+        <div class="tab active" data-ws-s="all">All</div>
+        <div class="tab" data-ws-s="pending">Pending</div>
+        <div class="tab" data-ws-s="shipped">Shipped</div>
+        <div class="tab" data-ws-s="delivered">Delivered</div>
+        <div class="tab" data-ws-s="cancelled">Cancelled</div>
+      </div>
+
+      <div class="toolbar">
+        <input class="search" id="ws-search" placeholder="ক্লায়েন্ট নাম, ফোন, ইনভয়েস বা কুরিয়ার দিয়ে খুঁজুন..." oninput="renderWholesale()">
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Date</th>
+              <th>Client</th>
+              <th>Items & Qty</th>
+              <th>Courier / Tracking</th>
+              <th class="num">Bill Amount</th>
+              <th class="num text-emerald-600">Paid</th>
+              <th class="num text-rose-600">Due</th>
+              <th class="num text-amber-600">Total Cost</th>
+              <th class="num text-indigo-600">Profit</th>
+              <th>Status</th>
+              <th style="text-align:center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="ws-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5. PRODUCTS, BATCHES (FIFO) & STOCK ALERT -->
+    <section class="view" id="view-products">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-products">Products, Batches & FIFO Inventory</h1>
+          <div class="desc">Unit Cost Entry, Stock Value & Profit Calculation</div>
+        </div>
+        <div class="row">
+          <button class="btn ghost" onclick="openCameraScanner('product')"><i class="fa-solid fa-camera"></i> Scan Barcode</button>
+          <button class="btn" onclick="openNewProductModal()">+ Add Product</button>
+        </div>
+      </div>
+
+      <div class="grid g-3" style="margin-bottom:14px">
+        <div class="card stat stat-blue"><div class="label">মোট আইটেম ভ্যারাইটি</div><div class="value" id="prod-total-items">0</div><div class="stub">🏷️</div></div>
+        <div class="card stat stat-amber"><div class="label">মোট স্টক কোয়ান্টিটি</div><div class="value" id="prod-total-stock-qty">0 pcs</div><div class="stub">📦</div></div>
+        <div class="card stat stat-green"><div class="label">TOTAL STOCK VALUE</div><div class="value" id="prod-total-stock-val">৳0</div><div class="stub">💰</div></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product Name</th>
+              <th>SKU / Barcode</th>
+              <th>Batches / Expiry</th>
+              <th class="num">Unit Cost (FIFO)</th>
+              <th class="num">Sale Price</th>
+              <th class="num">Stock</th>
+              <th class="num">Alert Limit</th>
+              <th class="num">Stock Value</th>
+              <th>Status / Alert</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="product-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6. PACKAGING -->
+    <section class="view" id="view-packaging">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-packaging">প্যাকেজিং উপাদান</h1>
+          <div class="desc">অর্ডার Confirm হলে স্বয়ংক্রিয়ভাবে প্যাকেজিং স্টক কমে যাবে</div>
+        </div>
+        <button class="btn" id="btn-new-packaging">+ Add Packaging Material</button>
+      </div>
+
+      <div class="grid g-3" style="margin-bottom:14px">
+        <div class="card stat stat-teal"><div class="label">মোট প্যাকেজিং আইটেম</div><div class="value" id="pack-summary-types">0 Types</div><div class="stub">📦</div></div>
+        <div class="card stat stat-blue"><div class="label">হাতে থাকা মোট উপাদান সংখ্যা</div><div class="value" id="pack-summary-qty">0 pcs</div><div class="stub">🔢</div></div>
+        <div class="card stat stat-green"><div class="label">প্যাকেজিং মোট ইনভেন্টরি ভ্যালু</div><div class="value" id="pack-summary-val">৳0</div><div class="stub">💵</div></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th class="num">Unit Cost</th>
+              <th class="num">Current Stock</th>
+              <th class="num">Alert Limit</th>
+              <th class="num">Stock Value</th>
+              <th>Status / Alert</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="packaging-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 7. ACCOUNTING -->
+    <section class="view" id="view-accounting">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-accounting">Accounting & Ledger</h1>
+          <div class="desc">Auto Profit Sync, Purchases, Multi-currency & Expenses</div>
+        </div>
+        <div class="row">
+          <button class="btn sm ghost" onclick="openPurchaseModal()">+ Add Purchase Entry</button>
+          <button class="btn sm" onclick="openExpenseModal('General Expense')">+ Add Expense</button>
+        </div>
+      </div>
+
+      <div class="tabs" id="acc-tabs">
+        <div class="tab active" data-sub="summary">Summary & Ledger</div>
+        <div class="tab" data-sub="purchases">Purchase History</div>
+        <div class="tab" data-sub="courier-pay">Courier Payments</div>
+        <div class="tab" data-sub="staff">Staff Payments</div>
+        <div class="tab" data-sub="office">Office & Utilities</div>
+        <div class="tab" data-sub="meta">Meta Ads Automation</div>
+      </div>
+
+      <!-- Summary -->
+      <div id="acc-sub-summary" class="acc-sub-view">
+        <div class="grid g-4" style="margin-bottom:14px">
+          <div class="card stat stat-green"><div class="label">Total Income (Delivered)</div><div class="value" id="acc-tot-inc">৳0</div><div class="stub">💰</div></div>
+          <div class="card stat stat-red"><div class="label">Total Expenses</div><div class="value" id="acc-tot-exp">৳0</div><div class="stub">💸</div></div>
+          <div class="card stat stat-blue"><div class="label">Stock Purchased</div><div class="value" id="acc-tot-purch">৳0</div><div class="stub">📦</div></div>
+          <div class="card stat stat-teal"><div class="label">Net Cash Balance</div><div class="value" id="acc-tot-bal">৳0</div><div class="stub">📈</div></div>
+        </div>
+
+        <div class="section-title">Recent Transactions</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Category</th><th>Title / Note</th><th class="num">Amount</th><th>Action</th></tr></thead>
+            <tbody id="acc-trans-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Purchase History -->
+      <div id="acc-sub-purchases" class="acc-sub-view" style="display:none">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th><th>Product</th><th>Batch No</th><th class="num">Qty</th><th class="num">Unit Cost</th><th class="num">Total (Qty × Cost)</th><th>Supplier</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="acc-purchases-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Courier Payments -->
+      <div id="acc-sub-courier-pay" class="acc-sub-view" style="display:none">
+        <div class="grid g-4" style="margin-bottom:14px">
+          <div class="card stat stat-purple"><div class="label">Steadfast Delivered</div><div class="value" id="courier-val-steadfast">৳0</div><div class="stub">🚚</div></div>
+          <div class="card stat stat-red"><div class="label">Pathao Delivered</div><div class="value" id="courier-val-pathao">৳0</div><div class="stub">🛵</div></div>
+          <div class="card stat stat-orange"><div class="label">RedX Delivered</div><div class="value" id="courier-val-redx">৳0</div><div class="stub">📦</div></div>
+          <div class="card stat stat-teal"><div class="label">Carrybee Delivered</div><div class="value" id="courier-val-carrybee">৳0</div><div class="stub">⚡</div></div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Courier</th><th class="num">Booked</th><th class="num">Delivered Value</th><th class="num">Return Delivery Loss</th></tr></thead>
+            <tbody id="acc-courier-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Staff Payments -->
+      <div id="acc-sub-staff" class="acc-sub-view" style="display:none">
+        <div class="toolbar">
+          <div class="section-title" style="margin:0">Staff Salary History</div>
+          <button class="btn sm" onclick="openExpenseModal('বেতন / Staff Salary')">+ Pay Salary</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Staff / Note</th><th class="num">Amount</th><th>Action</th></tr></thead>
+            <tbody id="acc-staff-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Office Expenses -->
+      <div id="acc-sub-office" class="acc-sub-view" style="display:none">
+        <div class="toolbar">
+          <div class="section-title" style="margin:0">Office Rent & Utilities</div>
+          <button class="btn sm" onclick="openExpenseModal('Office Expense')">+ Add Office Bill</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Category</th><th>Title</th><th class="num">Amount</th><th>Action</th></tr></thead>
+            <tbody id="acc-office-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Meta Ads Spend Converter -->
+      <div id="acc-sub-meta" class="acc-sub-view" style="display:none">
+        <div class="card" style="background:var(--surface-2); margin-bottom:14px">
+          <h3 style="font-size:14px; margin-bottom:6px">⚡ Meta Ads Spend Converter (USD to BDT)</h3>
+          <div class="row">
+            <div class="field"><label>Spend (USD $)</label><input type="number" id="meta-usd" placeholder="50"></div>
+            <div class="field"><label>Exchange Rate (৳)</label><input type="number" id="meta-rate" value="130"></div>
+            <div class="field"><label>Date</label><input type="date" id="meta-date"></div>
+            <div class="field" style="justify-content: flex-end"><button class="btn" onclick="saveMetaSpend()" style="height:36px">Sync Expense</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. CUSTOMERS & FRAUD PROTECTION -->
+    <section class="view" id="view-customers">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-customers">Customers & Fraud Risk Protection</h1>
+          <div class="desc">Automated Fraud Score Indicator (Safe / Medium / High Risk) & Blacklist</div>
+        </div>
+        <button class="btn danger" id="btn-new-blacklist">+ Add to Blacklist</button>
+      </div>
+
+      <div class="grid g-3" style="margin-bottom:14px">
+        <div class="card stat stat-blue"><div class="label">মোট ইউনিক কাস্টমার</div><div class="value" id="cust-stat-total">0</div><div class="stub">👥</div></div>
+        <div class="card stat stat-green"><div class="label">কাস্টমার মোট স্পেন্ড</div><div class="value" id="cust-stat-spent">৳0</div><div class="stub">💰</div></div>
+        <div class="card stat stat-red"><div class="label">ব্ল্যাকলিস্টেড ফ্রড নম্বর</div><div class="value" id="cust-stat-blocked">0</div><div class="stub">🚫</div></div>
+      </div>
+
+      <div class="section-title">Customer Order Directory & Risk Score</div>
+      <div class="tbl-wrap" style="margin-bottom:18px">
+        <table>
+          <thead><tr><th>Customer Name</th><th>Phone</th><th class="num">Orders</th><th class="num">Delivered</th><th class="num">Return Ratio</th><th>Risk Level</th><th class="num">Lifetime Value (LTV)</th></tr></thead>
+          <tbody id="customer-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="section-title">Blacklisted / Fraud Numbers</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Phone Number</th><th>Reason / Note</th><th>Date Added</th><th>Action</th></tr></thead>
+          <tbody id="blacklist-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 9. STAFF & PERMISSIONS SYSTEM -->
+    <section class="view" id="view-users">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-users">🔐 User Accounts & Role Permissions</h1>
+          <div class="desc">Admin, Manager, Sales Staff, Inventory Staff, Accountant</div>
+        </div>
+        <button class="btn" onclick="openNewUserModal()">+ Add New Staff</button>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Username / Name</th>
+              <th>Role</th>
+              <th>Permissions</th>
+              <th>2FA Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 10. REPORTS -->
+    <section class="view" id="view-reports">
+      <div class="report-header-box">
+        <div class="report-main-title"><i class="fa-solid fa-chart-line text-indigo-600"></i> Reports & Financial Audit</div>
+        <div class="report-filter-wrapper">
+          <div class="period-pills" id="rep-period-pills">
+            <button class="pill-btn" data-p="today">Today</button>
+            <button class="pill-btn" data-p="7days">7 Days</button>
+            <button class="pill-btn active" data-p="30days">30 Days</button>
+            <button class="pill-btn" data-p="custom">Custom</button>
+            <button class="pill-btn" data-p="all">All Time</button>
+          </div>
+          <div id="rep-custom-date-box" class="rep-custom-date-picker" style="display: none;">
+            <input type="date" id="rep-start-date" class="date-inp">
+            <span class="date-sep">to</span>
+            <input type="date" id="rep-end-date" class="date-inp">
+            <button class="btn sm" onclick="renderReports()"><i class="fa-solid fa-check"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="report-sub-nav">
+        <button class="rep-tab-btn active" data-target="profit-report">Profit Report</button>
+        <button class="rep-tab-btn" data-target="order-report">Order Report</button>
+        <button class="rep-tab-btn" data-target="product-report">Product Report</button>
+        <button class="rep-tab-btn" data-target="courier-report">Courier Report</button>
+        <button class="rep-tab-btn" data-target="packaging-report">Packaging Report</button>
+        <button class="rep-tab-btn" data-target="export-center">Export Center</button>
+      </div>
+
+      <!-- Profit Report -->
+      <div id="rep-view-profit-report" class="rep-view-content">
+        <div class="rep-cards-grid">
+          <div class="card stat stat-green">
+            <div class="label">TOTAL SALES (REVENUE)</div>
+            <div class="value" id="rep-p-sales">৳0</div>
+            <div class="stub">💰</div>
+            <div class="rep-card-sub" id="rep-p-orders-count" style="color: rgba(255,255,255,0.85); margin-top:4px">0 Orders</div>
+          </div>
+          <div class="card stat stat-blue">
+            <div class="label">PRODUCT COST (COGS)</div>
+            <div class="value" id="rep-p-cogs">৳0</div>
+            <div class="stub">📦</div>
+            <div class="rep-card-sub" style="color: rgba(255,255,255,0.85); margin-top:4px">FIFO ক্রয় খরচ</div>
+          </div>
+          <div class="card stat stat-orange">
+            <div class="label">TOTAL EXPENSES</div>
+            <div class="value" id="rep-p-expenses">৳0</div>
+            <div class="stub">🏷️</div>
+            <div class="rep-card-sub" style="color: rgba(255,255,255,0.85); margin-top:4px">বিজ্ঞাপন ও লজিস্টিক লস</div>
+          </div>
+          <div class="card stat stat-green" id="rep-p-profit-card">
+            <div class="label">NET PROFIT (নিট লাভ)</div>
+            <div class="value" id="rep-p-profit">৳0</div>
+            <div class="stub">📈</div>
+            <div class="rep-card-sub" id="rep-p-margin" style="color: rgba(255,255,255,0.9); margin-top:4px">▲ 0.0% Margin</div>
+          </div>
+        </div>
+
+        <div class="rep-section-box">
+          <div class="rep-box-title"><i class="fa-solid fa-chart-pie text-indigo-600"></i> Revenue Allocation</div>
+          <div class="revenue-bar-wrapper">
+            <div class="rev-bar-item"><span class="dot bg-emerald-500"></span> Net Profit: <b id="bar-profit-pct">0%</b> (<span id="bar-profit-val">৳0</span>)</div>
+            <div class="rev-bar-item"><span class="dot bg-blue-500"></span> Product Cost: <b id="bar-cogs-pct">0%</b> (<span id="bar-cogs-val">৳0</span>)</div>
+            <div class="rev-bar-item"><span class="dot bg-rose-500"></span> Expenses: <b id="bar-exp-pct">0%</b> (<span id="bar-exp-val">৳0</span>)</div>
+          </div>
+          <div class="rev-progress-track">
+            <div class="rev-fill bg-emerald-500" id="fill-profit" style="width: 0%"></div>
+            <div class="rev-fill bg-blue-500" id="fill-cogs" style="width: 0%"></div>
+            <div class="rev-fill bg-rose-500" id="fill-exp" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="rep-section-box">
+          <div class="rep-box-title">বিস্তারিত আয়-ব্যয় বিবরণী</div>
+          <table class="rep-table">
+            <thead><tr><th>বিবরণ</th><th class="num">পরিমাণ</th><th class="num">%</th></tr></thead>
+            <tbody id="rep-detailed-breakdown"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Order Journey Flow -->
+      <div id="rep-view-order-report" class="rep-view-content" style="display:none">
+        <div class="rep-section-box">
+          <div class="rep-box-title">Order Status Journey Flow</div>
+          <div class="order-journey-grid" id="order-journey-cards"></div>
+        </div>
+      </div>
+
+      <!-- Product Report -->
+      <div id="rep-view-product-report" class="rep-view-content" style="display:none">
+        <div class="rep-section-box">
+          <div class="toolbar" style="margin-bottom:12px">
+            <input type="text" id="rep-prod-search" class="search" placeholder="Product name বা SKU দিয়ে খুঁজুন..." oninput="renderProductReport()">
+          </div>
+          <table class="rep-table">
+            <thead>
+              <tr><th>Product</th><th class="num">Orders</th><th class="num">Qty</th><th class="num text-emerald-600">Delivered</th><th class="num text-rose-600">Returned</th><th class="num">Revenue</th><th class="num">Success%</th><th class="num">Gross Margin</th></tr>
+            </thead>
+            <tbody id="rep-product-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Courier Report -->
+      <div id="rep-view-courier-report" class="rep-view-content" style="display:none">
+        <div class="rep-section-box">
+          <table class="rep-table">
+            <thead>
+              <tr><th>Courier Service</th><th class="num">মোট পার্সেল</th><th class="num text-emerald-600">Delivered</th><th class="num text-rose-600">Returned</th><th class="num text-blue-600">In Transit</th><th class="num">Success Ratio</th><th class="num">মোট মূল্য (৳)</th></tr>
+            </thead>
+            <tbody id="rep-courier-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Packaging Report -->
+      <div id="rep-view-packaging-report" class="rep-view-content" style="display:none">
+        <div class="rep-cards-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:14px">
+          <div class="card stat stat-blue"><div class="label">মোট ব্যবহার</div><div class="value" id="pack-rep-used-units">0 pcs</div><div class="stub">📦</div></div>
+          <div class="card stat stat-orange"><div class="label">ব্যবহারের খরচ</div><div class="value" id="pack-rep-used-cost">৳0</div><div class="stub">💸</div></div>
+          <div class="card stat stat-red"><div class="label">নষ্ট / Waste</div><div class="value" id="pack-rep-waste-units">0 pcs</div><div class="stub">⚠️</div></div>
+          <div class="card stat stat-green"><div class="label">স্টক Inventory মূল্য</div><div class="value" id="pack-rep-inventory-val">৳0</div><div class="stub">🏷️</div></div>
+        </div>
+
+        <div class="rep-section-box">
+          <table class="rep-table">
+            <thead><tr><th>উপাদানের নাম</th><th class="num">বর্তমান স্টক</th><th class="num">একক মূল্য</th><th class="num">মোট ভ্যালুয়েশন</th></tr></thead>
+            <tbody id="rep-packaging-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Export Center -->
+      <div id="rep-view-export-center" class="rep-view-content" style="display:none">
+        <div class="rep-section-box">
+          <div class="rep-box-title">CSV Export Center</div>
+          <div class="export-grid">
+            <div class="export-card"><div><b>Orders Report CSV</b><br><span class="muted">নাম, ফোন, পণ্য ও ট্র্যাকিং হিস্টোরি</span></div><button class="btn sm ghost" onclick="exportOrdersToCSV()">Download</button></div>
+            <div class="export-card"><div><b>Profit & Loss Statement CSV</b><br><span class="muted">Revenue, COGS, লজিস্টিক ও নিট লাভ</span></div><button class="btn sm ghost" onclick="exportProfitCSV()">Download</button></div>
+            <div class="export-card"><div><b>Product Sales Performance CSV</b><br><span class="muted">আইটেম-ওয়াইজ বিক্রয় ও গ্রস মার্জিন</span></div><button class="btn sm ghost" onclick="exportProductCSV()">Download</button></div>
+            <div class="export-card"><div><b>Courier Audit CSV</b><br><span class="muted">কুরিয়ার ডেলিভারি ও রিটার্ন রেশিও</span></div><button class="btn sm ghost" onclick="exportCourierCSV()">Download</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. AUDIT & ACTIVITY LOG -->
+    <section class="view" id="view-activity">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-activity">Audit & Activity Log</h1>
+          <div class="desc">সিস্টেমে সকল এডিট, ডিলিট, স্টক পরিবর্তন ও পারচেজ হিস্টোরির সম্পূর্ণ ট্রেইল</div>
+        </div>
+        <button class="btn danger sm" onclick="clearActivityLogs()">Clear History</button>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>User</th>
+              <th>Action Category</th>
+              <th>Activity Description</th>
+            </tr>
+          </thead>
+          <tbody id="activity-log-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 12. SETTINGS -->
+    <section class="view" id="view-settings">
+      <div class="topbar">
+        <div>
+          <h1 id="view-title-settings">Settings & Customization</h1>
+          <div class="desc">ব্র্যান্ডিং, লোগো, ড্যাশবোর্ড সেকশন নাম, কুরিয়ার ও ফ্রড চেকার API কী</div>
+        </div>
+      </div>
+
+      <div class="grid g-2">
+        <!-- Live Courier & Fraud API Settings -->
+        <div class="card">
+          <h3 style="margin-top:0"><i class="fa-solid fa-shield-halved text-rose-600"></i> 🛡️ Fraud Checker & Courier API</h3>
+          <div class="field"><label>Fraud Checker API Key</label><input type="password" id="set-fraud-api-key" placeholder="fraud_api_key_..."></div>
+          <div class="field"><label>Fraud API Custom Endpoint (Optional)</label><input id="set-fraud-api-url" placeholder="https://api.example.com/fraud/check"></div>
+          <div class="field"><label>Steadfast API Key</label><input type="password" id="set-steadfast-key" placeholder="api_key_..."></div>
+          <div class="field"><label>Pathao Client ID / Secret</label><input type="password" id="set-pathao-key" placeholder="pathao_secret_..."></div>
+          <div class="row">
+            <div class="field"><label>Inside Dhaka Base (৳)</label><input type="number" id="rule-dhaka" value="80"></div>
+            <div class="field"><label>Outside Dhaka Base (৳)</label><input type="number" id="rule-outside" value="130"></div>
+            <div class="field"><label>Weight Extra / KG (৳)</label><input type="number" id="rule-weight" value="20"></div>
+          </div>
+          <button class="btn" onclick="saveShippingRules()">Save API & Shipping Rules</button>
+        </div>
+
+        <!-- Branding & Profile Settings -->
+        <div class="card">
+          <h3 style="margin-top:0"><i class="fa-solid fa-paintbrush text-purple"></i> ব্র্যান্ডিং ও লোগো কাস্টমাইজেশন</h3>
+          <div class="field"><label>প্ল্যাটফর্মের নাম</label><input id="set-branding-name" placeholder="SKM Flow"></div>
+          <div class="field"><label>ট্যাগলাইন</label><input id="set-branding-sub" placeholder="Order & Accounting Suite"></div>
+          
+          <div class="field">
+            <label>প্রোফাইল লোগো আপলোড</label>
+            <div class="row" style="align-items:center;">
+              <input type="file" id="set-logo-input" accept="image/*" onchange="handleLogoUpload(event)" style="font-size:11px">
+              <button class="btn danger sm" onclick="removeLogo()">Remove</button>
+            </div>
+            <div id="logo-preview-box" style="margin-top:6px;"></div>
+          </div>
+
+          <div class="field"><label>দোকানের নাম (ইনভয়েস)</label><input id="set-shopname"></div>
+          <div class="field"><label>ফোন নম্বর</label><input id="set-phone"></div>
+          <div class="field"><label>ঠিকানা</label><input id="set-address"></div>
+          <div class="field"><label>মুদ্রা প্রতীক</label><input id="set-currency" value="৳"></div>
+          <button class="btn" onclick="saveGeneralSettings()">Save Branding</button>
+        </div>
+      </div>
+
+      <div class="grid g-2" style="margin-top:14px">
+        <!-- Section Titles Customizer -->
+        <div class="card">
+          <h3 style="margin-top:0"><i class="fa-solid fa-pen-to-square text-indigo"></i> ড্যাশবোর্ড সেকশনের নাম এডিট</h3>
+          <div class="row">
+            <div class="field"><label>Dashboard</label><input id="set-lbl-dash" value="ড্যাশবোর্ড"></div>
+            <div class="field"><label>Orders</label><input id="set-lbl-ord" value="অর্ডার / পার্সেল"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Couriers</label><input id="set-lbl-courier" value="কুরিয়ার ম্যানেজমেন্ট"></div>
+            <div class="field"><label>Fraud Checker</label><input id="set-lbl-fraud" value="Fraud Checker (API)"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Wholesale</label><input id="set-lbl-ws" value="পাইকারি (Wholesale)"></div>
+            <div class="field"><label>Products</label><input id="set-lbl-prod" value="প্রোডাক্ট ও স্টক"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Packaging</label><input id="set-lbl-pack" value="প্যাকেজিং উপাদান"></div>
+            <div class="field"><label>Accounting</label><input id="set-lbl-acc" value="Accounting"></div>
+          </div>
+          <button class="btn ghost" onclick="saveSectionTitles()">Update Section Names</button>
+        </div>
+
+        <!-- Backup & Data Restore -->
+        <div class="card">
+          <h3 style="margin-top:0"><i class="fa-solid fa-cloud-arrow-down text-emerald"></i> Data Backup & System Restore</h3>
+          <p class="muted" style="font-size:12px">অফলাইন JSON ব্যাকআপ ফাইল দিয়ে পুরো ডাটাবেজ এক ক্লিকে রিকভার করা যাবে।</p>
+          <div class="row">
+            <button class="btn ghost" id="btn-export"><i class="fa-solid fa-download"></i> Export JSON</button>
+            <button class="btn ghost" id="btn-import-trigger"><i class="fa-solid fa-upload"></i> Restore JSON</button>
+          </div>
+          <input type="file" id="file-import" accept=".json" style="display:none">
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+            <button class="btn danger sm" id="btn-reset-all"><i class="fa-solid fa-trash-can"></i> Reset All System Data</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Order Modal with Live Fraud API Check, AI Auto-fill, Dynamic Shipping & Live Link -->
+<div class="modal-bg" id="modal-order">
+  <div class="modal modal-lg">
+    <button class="close" data-close>✕</button>
+    <h3 id="order-modal-title">New Order Entry</h3>
+
+    <!-- AI Auto-fill Box -->
+    <div style="background:var(--purple-soft); padding:10px; border-radius:8px; border:1px dashed var(--purple); margin: 8px 0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+        <label style="font-size:11.5px; font-weight:700; color:var(--purple-dark)">✨ AI Auto-fill (Paste Msg)</label>
+        <button class="btn sm" type="button" onclick="parseAIMessage()">Parse & Fill</button>
+      </div>
+      <textarea id="ai-paste-box" rows="2" placeholder="কাস্টমার মেসেজ পেস্ট করুন..." style="width:100%; border:1px solid var(--line); border-radius:6px; padding:6px; font-size:12px"></textarea>
+    </div>
+
+    <!-- Fraud & Risk Score Badge Alert (Live API Integrated) -->
+    <div id="customer-risk-indicator" style="display:none; padding:8px 12px; border-radius:6px; margin-bottom:8px; font-weight:700; font-size:12px;"></div>
+
+    <div class="row">
+      <div class="field"><label>Date</label><input type="date" id="f-order-date"></div>
+      <div class="field">
+        <label>Courier Service</label>
+        <select id="f-order-courier" onchange="syncCourierLiveUrlPreview()">
+          <option value="Steadfast">Steadfast</option>
+          <option value="Pathao">Pathao</option>
+          <option value="Redx">Redx</option>
+          <option value="Carrybee">Carrybee</option>
+          <option value="Sundarban">Sundarban Courier</option>
+          <option value="SA Paribahan">SA Paribahan</option>
+        </select>
+      </div>
+      <div class="field"><label>Courier Tracking ID</label><input id="f-order-tracking" placeholder="CID-98234" oninput="syncCourierLiveUrlPreview()"></div>
+      <div class="field"><label>Courier Cost (৳)</label><input type="number" id="f-order-courier-cost" value="60"></div>
+    </div>
+
+    <div class="row">
+      <div class="field"><label>Customer Name</label><input id="f-order-name" placeholder="Name"></div>
+      <div class="field">
+        <label>Phone (Live API Fraud Check)</label>
+        <div style="display:flex; gap:4px;">
+          <input id="f-order-phone" oninput="evaluateCustomerRisk(this.value)" placeholder="01XXXXXXXXX" style="flex:1;">
+          <button class="btn ghost sm" type="button" onclick="checkOrderPhoneFraudAPI()" title="Check Live Courier Fraud History"><i class="fa-solid fa-shield-halved"></i> Check</button>
+        </div>
+      </div>
+      <div class="field"><label>Address</label><input id="f-order-address" placeholder="Address"></div>
+    </div>
+
+    <!-- Dynamic Shipping Calculation Rule Selector -->
+    <div class="row" style="background:var(--surface-2); padding:8px; border-radius:6px;">
+      <div class="field">
+        <label>Delivery Area</label>
+        <select id="f-order-area" onchange="autoCalculateShippingCharge()">
+          <option value="inside">Inside Dhaka</option>
+          <option value="outside">Outside Dhaka</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Weight (KG)</label>
+        <input type="number" id="f-order-weight" value="1" min="1" step="0.5" oninput="autoCalculateShippingCharge()">
+      </div>
+      <div class="field">
+        <label>Calculated Delivery Charge (৳)</label>
+        <input type="number" id="f-order-delivery" value="80">
+      </div>
+    </div>
+
+    <div style="background:var(--surface-2); padding:10px; border-radius:8px; border:1px solid var(--line); margin: 8px 0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+        <label style="font-weight:700; font-size:11.5px;">Select Products & FIFO Batches</label>
+        <button class="btn sm ghost" type="button" onclick="openCameraScanner('cart')"><i class="fa-solid fa-barcode"></i> Scan SKU to Cart</button>
+      </div>
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="flex:2"><label>Product</label><select id="cart-product-select"></select></div>
+        <div class="field"><label>Qty</label><input type="number" id="cart-qty" value="1" min="1"></div>
+        <div class="field"><label>Sale Price</label><input type="number" id="cart-price"></div>
+        <div class="field"><label>FIFO Cost</label><input type="number" id="cart-cost"></div>
+        <div class="field" style="flex:0"><button class="btn sm" type="button" onclick="addItemToCart()">+ Add</button></div>
+      </div>
+      <table style="margin-top:8px; background:#fff" id="cart-table">
+        <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Price</th><th class="num">FIFO Cost</th><th class="num">Total</th><th></th></tr></thead>
+        <tbody id="cart-items-body"></tbody>
+      </table>
+    </div>
+
+    <div class="row">
+      <div class="field"><label>Packaging Item</label><select id="f-order-packaging"></select></div>
+      <div class="field"><label>Advance Paid</label><input type="number" id="f-order-advance" value="0"></div>
+      <div class="field"><label>Discount</label><input type="number" id="f-order-discount" value="0"></div>
+      <div class="field">
+        <label>Status</label>
+        <select id="f-order-status">
+          <option value="pending">Pending</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered (Auto Stock & Profit Sync)</option>
+          <option value="returned">Returned</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px; justify-content:space-between; align-items:center;">
+      <div class="row">
+        <button class="btn" id="btn-save-order">Save Order</button>
+        <button class="btn ghost" data-close>Cancel</button>
+      </div>
+      <div id="live-tracking-btn-box"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Camera Barcode Scanner Modal -->
+<div class="modal-bg" id="modal-scanner">
+  <div class="modal">
+    <button class="close" data-close onclick="stopCameraScanner()">✕</button>
+    <h3>📸 Live Barcode / SKU Camera Scanner</h3>
+    <div id="reader" style="width:100%; min-height:260px; margin-top:10px; border-radius:8px; overflow:hidden;"></div>
+    <div style="margin-top:10px; text-align:center;">
+      <span class="muted" style="font-size:11px">ক্যামেরার সামনে বারকোড বা কিউআর কোডটি ধরুন</span>
+    </div>
+  </div>
+</div>
+
+<!-- COD Reconciliation Settlement Modal -->
+<div class="modal-bg" id="modal-cod-reconciliation">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <h3>💰 Record Courier COD Settlement</h3>
+    <div class="row">
+      <div class="field"><label>Date</label><input type="date" id="f-cod-date"></div>
+      <div class="field">
+        <label>Courier</label>
+        <select id="f-cod-courier">
+          <option value="Steadfast">Steadfast</option>
+          <option value="Pathao">Pathao</option>
+          <option value="Redx">Redx</option>
+          <option value="Carrybee">Carrybee</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Settlement Batch / Invoice Ref</label><input id="f-cod-batch" placeholder="e.g. ST-PAY-202608"></div>
+    <div class="row">
+      <div class="field"><label>Total Delivered COD (৳)</label><input type="number" id="f-cod-gross" oninput="calcCODNet()"></div>
+      <div class="field"><label>Service / Return Deductions (৳)</label><input type="number" id="f-cod-deduct" value="0" oninput="calcCODNet()"></div>
+    </div>
+    <div class="field"><label>Net Bank Payout (৳)</label><input type="number" id="f-cod-net" readonly style="background:var(--surface-2); font-weight:800; color:var(--green)"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" onclick="saveCODSettlement()">Save COD Settlement</button>
+      <button class="btn ghost" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product Modal with FIFO Batches & Expiry -->
+<div class="modal-bg" id="modal-product">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <h3 id="product-modal-title">Add / Update Product & FIFO Batches</h3>
+    <div class="row">
+      <div class="field"><label>Product Name</label><input id="f-prod-name"></div>
+      <div class="field"><label>SKU / Barcode</label><input id="f-prod-sku" placeholder="Scan or Type SKU"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Selling Price (৳)</label><input type="number" id="f-prod-sell"></div>
+      <div class="field"><label>Total Stock (Qty)</label><input type="number" id="f-prod-stock" value="0"></div>
+      <div class="field"><label>Alert Limit</label><input type="number" id="f-prod-alert" value="20"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Unit Cost / Batch Cost (৳)</label><input type="number" id="f-prod-cost"></div>
+      <div class="field"><label>Batch Expiry Date</label><input type="date" id="f-prod-expiry"></div>
+    </div>
+    <div class="field"><label>Batch / Lot Number</label><input id="f-prod-batch" placeholder="BATCH-2026-01"></div>
+    <div id="prod-cost-history" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btn-save-product">Save Product</button>
+      <button class="btn ghost" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Purchase Modal with Batch & Supplier -->
+<div class="modal-bg" id="modal-purchase">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <h3 id="purchase-modal-title">Record Stock Purchase & New Batch (FIFO)</h3>
+    <div class="row">
+      <div class="field"><label>Date</label><input type="date" id="f-purch-date"></div>
+      <div class="field"><label>Product</label><select id="f-purch-product"></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Batch / Lot Number</label><input id="f-purch-batch" placeholder="LOT-8823"></div>
+      <div class="field"><label>Expiry Date</label><input type="date" id="f-purch-expiry"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Quantity (Qty)</label><input type="number" id="f-purch-qty" value="10" min="1" oninput="calculatePurchaseTotal()"></div>
+      <div class="field"><label>Unit Cost (৳)</label><input type="number" id="f-purch-cost" oninput="calculatePurchaseTotal()"></div>
+      <div class="field"><label>Sale Price (৳)</label><input type="number" id="f-purch-price"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Total Cost</label><input type="number" id="f-purch-total" readonly style="background:var(--surface-2); font-weight:700"></div>
+      <div class="field"><label>Supplier Name</label><input id="f-purch-supplier"></div>
+    </div>
+    <div class="field"><label>Note</label><input id="f-purch-note"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btn-save-purchase">Save Purchase Entry</button>
+      <button class="btn ghost" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Wholesale Modal -->
+<div class="modal-bg" id="modal-wholesale">
+  <div class="modal modal-lg">
+    <button class="close" data-close>✕</button>
+    <h3 id="ws-modal-title">New Wholesale Order Entry</h3>
+    <div class="row">
+      <div class="field"><label>Date</label><input type="date" id="f-ws-date"></div>
+      <div class="field"><label>Wholesale Client Name</label><input id="f-ws-name" placeholder="Client Name"></div>
+      <div class="field"><label>Phone Number</label><input id="f-ws-phone" placeholder="01XXXXXXXXX"></div>
+    </div>
+    <div class="field"><label>Client Address / Market</label><input id="f-ws-address"></div>
+    <div class="row" style="background:var(--surface-2); padding:10px; border-radius:8px; margin: 6px 0;">
+      <div class="field">
+        <label>Courier Service</label>
+        <select id="f-ws-courier">
+          <option value="Sundarban">Sundarban Courier</option>
+          <option value="SA Paribahan">SA Paribahan</option>
+          <option value="Steadfast">Steadfast</option>
+          <option value="Pathao">Pathao</option>
+          <option value="Direct Delivery">Direct / Hand to Hand</option>
+        </select>
+      </div>
+      <div class="field"><label>Tracking ID / CN No.</label><input id="f-ws-tracking"></div>
+      <div class="field"><label>Courier Charge (৳)</label><input type="number" id="f-ws-courier-cost" value="0" oninput="calculateWholesaleFinancials()"></div>
+      <div class="field"><label>Packaging Cost (৳)</label><input type="number" id="f-ws-packaging-cost" value="0" oninput="calculateWholesaleFinancials()"></div>
+    </div>
+    <div style="background:var(--surface-2); padding:10px; border-radius:8px; margin: 8px 0;">
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="flex:2"><label>Product</label><select id="ws-cart-product-select"></select></div>
+        <div class="field"><label>Qty</label><input type="number" id="ws-cart-qty" value="10" min="1"></div>
+        <div class="field"><label>Wholesale Rate</label><input type="number" id="ws-cart-price"></div>
+        <div class="field"><label>FIFO Cost</label><input type="number" id="ws-cart-cost"></div>
+        <div class="field" style="flex:0"><button class="btn sm" type="button" onclick="addWholesaleCartItem()">+ Add</button></div>
+      </div>
+      <table style="margin-top:8px; background:#fff" id="ws-cart-table">
+        <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Cost</th><th class="num">Total</th><th></th></tr></thead>
+        <tbody id="ws-cart-items-body"></tbody>
+      </table>
+    </div>
+    <div class="row">
+      <div class="field"><label>Total Bill Amount</label><input type="number" id="f-ws-bill" readonly style="background:var(--surface-2); font-weight:700"></div>
+      <div class="field"><label>Paid Amount</label><input type="number" id="f-ws-paid" value="0" oninput="calculateWholesaleFinancials()"></div>
+      <div class="field"><label>Due Balance</label><input type="number" id="f-ws-due" readonly style="background:var(--surface-2); font-weight:700; color:var(--red)"></div>
+      <div class="field">
+        <label>Status</label>
+        <select id="f-ws-status">
+          <option value="pending">Pending</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="btn-save-wholesale">Save Wholesale Order</button>
+      <button class="btn ghost" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Packaging Modal -->
+<div class="modal-bg" id="modal-packaging">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <h3 id="pack-modal-title">New Packaging Material</h3>
+    <div class="field"><label>Material Name</label><input id="f-pack-name"></div>
+    <div class="row">
+      <div class="field"><label>Cost Per Unit (৳)</label><input type="number" id="f-pack-cost" value="5"></div>
+      <div class="field"><label>Current Stock</label><input type="number" id="f-pack-stock" value="100"></div>
+      <div class="field"><label>Alert Limit</label><input type="number" id="f-pack-alert" value="20"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btn-save-packaging">Save</button>
+      <button class="btn ghost" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Modal -->
+<div class="modal-bg" id="modal-expense">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <h3>Record Expense</h3>
+    <div class="row">
+      <div class="field"><label>Date</label><input type="date" id="f-exp-date"></div>
+      <div class="field">
+        <label>Category</label>
+        <select id="f-exp-cat">
+          <option value="মার্কেটিং / Ads">মার্কেটিং / Ads</option>
+          <option value="Office Expense">Office Expense</option>
+          <option value="বেতন / Staff Salary">বেতন / Staff Salary</option>
+          <option value="প্যাকেজিং উপাদান">প্যাকেজিং উপাদান</option>
+          <option value="General Expense">General Expense</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Title</label><input id="f-exp-title"></div>
+    <div class="field"><label>Amount (৳)</label><input type="number" id="f-exp-amount"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btn-save-expense">Save Expense</button>
+      <button class="btn ghost" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Account & Permission Modal -->
+<div class="modal-bg" id="modal-user">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <h3>Staff Account & Role Permissions</h3>
+    <div class="row">
+      <div class="field"><label>Staff Name</label><input id="f-u-name"></div>
+      <div class="field"><label>Username</label><input id="f-u-user"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Password</label><input type="password" id="f-u-pass"></div>
+      <div class="field">
+        <label>Role</label>
+        <select id="f-u-role" onchange="applyRolePresetPermissions(this.value)">
+          <option value="Admin">Admin</option>
+          <option value="Manager">Manager</option>
+          <option value="Sales Staff">Sales Staff</option>
+          <option value="Inventory Staff">Inventory Staff</option>
+          <option value="Accountant">Accountant</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:var(--surface-2); padding:10px; border-radius:8px; margin: 8px 0;">
+      <label style="font-weight:700; font-size:11.5px; display:block; margin-bottom:6px">Permissions:</label>
+      <div class="grid g-2" style="font-size:12px;">
+        <label><input type="checkbox" id="perm-ord-create" checked> Order Create ✅</label>
+        <label><input type="checkbox" id="perm-ord-edit" checked> Order Edit ✅</label>
+        <label><input type="checkbox" id="perm-prod-del"> Product Delete ❌</label>
+        <label><input type="checkbox" id="perm-acc-access"> Accounting Access ❌</label>
+      </div>
+    </div>
+    <div class="field"><label><input type="checkbox" id="f-u-2fa"> Enable 2FA Verification</label></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="btn-save-user">Save Staff Account</button>
+      <button class="btn ghost" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Password & Security Modal -->
+<div class="modal-bg" id="modal-security">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <h3>Security & Password Management</h3>
+    <div class="field"><label>Current Password</label><input type="password" id="sec-old-pass"></div>
+    <div class="field"><label>New Password</label><input type="password" id="sec-new-pass"></div>
+    <div class="field"><label><input type="checkbox" id="sec-2fa-toggle"> Enable 2FA Security</label></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" onclick="saveUserSecurity()">Update Password</button>
+      <button class="btn ghost" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Blacklist Modal -->
+<div class="modal-bg" id="modal-blacklist">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <h3>Add to Fraud Blacklist</h3>
+    <div class="field"><label>Phone Number</label><input id="f-black-phone"></div>
+    <div class="field"><label>Reason</label><input id="f-black-reason"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn danger" id="btn-save-blacklist">Block Number</button>
+      <button class="btn ghost" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print Modal (Single & Bulk Invoices / 3x3 Thermal Stickers) -->
+<div class="modal-bg" id="modal-print">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <div class="tabs" style="margin-bottom:10px">
+      <div class="tab active" id="tab-btn-inv" onclick="setPrintMode('invoice')">Invoice View</div>
+      <div class="tab" id="tab-btn-sticker" onclick="setPrintMode('sticker')">3×3 Thermal Sticker</div>
+    </div>
+    <div id="printable-area"></div>
+    <div class="row" style="margin-top:14px; justify-content: flex-end;">
+      <button class="btn" onclick="window.print()">🖨️ Print Now</button>
+      <button class="btn ghost" data-close>Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
