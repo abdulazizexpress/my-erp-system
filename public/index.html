@@ -813,14 +813,13 @@
       </div>
     </section>
 
-    <!-- 11. AUDIT & ACTIVITY LOG -->
+<!-- 11. AUDIT & ACTIVITY LOG -->
     <section class="view" id="view-activity">
       <div class="topbar">
         <div>
           <h1 id="view-title-activity">Audit & Activity Log</h1>
           <div class="desc">সিস্টেমে সকল এডিট, ডিলিট, স্টক পরিবর্তন ও পারচেজ হিস্টোরির সম্পূর্ণ ট্রেইল</div>
         </div>
-        <button class="btn danger sm" onclick="clearActivityLogs()">Clear History</button>
       </div>
 
       <div class="tbl-wrap">
@@ -831,6 +830,7 @@
               <th>User</th>
               <th>Action Category</th>
               <th>Activity Description</th>
+              <th style="text-align:center">Action</th>
             </tr>
           </thead>
           <tbody id="activity-log-body"></tbody>
