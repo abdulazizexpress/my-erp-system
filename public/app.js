@@ -269,9 +269,57 @@ async function fetchLiveFraudDataFromAPI(phone) {
   };
 }
 
+/* =======================================================================
+   SMART PHONE NUMBER FORMATTER & VALIDATOR
+======================================================================= */
+function formatAndValidateFraudPhone(input) {
+  let val = input.value;
+
+  // ১. বাংলা সংখ্যা টাইপ করলে স্বয়ংক্রিয়ভাবে ইংরেজিতে কনভার্ট
+  const bnToEn = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
+  val = val.replace(/[০-৯]/g, match => bnToEn[match]);
+
+  // ২. হাইফেন, স্পেস, ব্র্যাকেট এবং সব নন-ডিজিট ক্যারেক্টার রিমুভ
+  let digits = val.replace(/[^0-9]/g, '');
+
+  // ৩. +88 বা 88 কান্ট্রি কোড সহ পেস্ট করলে তা রিমুভ করা
+  if (digits.startsWith("8801")) {
+    digits = digits.slice(2);
+  }
+
+  // ৪. সর্বোচ্চ ১১ ডিজিট রাখা
+  if (digits.length > 11) {
+    digits = digits.slice(0, 11);
+  }
+
+  input.value = digits;
+
+  // ৫. ১১ ডিজিটের কম হলে লাল রঙের ওয়ার্নিং মেসেজ দেখানো
+  const errBox = document.getElementById("fraud-phone-error");
+  if (errBox) {
+    if (digits.length > 0 && digits.length < 11) {
+      errBox.style.display = "block";
+      input.style.borderColor = "#dc2626";
+    } else {
+      errBox.style.display = "none";
+      input.style.borderColor = "";
+    }
+  }
+}
+
 async function runManualFraudCheck() {
-  const phone = document.getElementById("fraud-search-phone").value.trim();
-  if (!phone || phone.length < 11) { toast("সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন"); return; }
+  const phoneInput = document.getElementById("fraud-search-phone");
+  const phone = phoneInput.value.trim();
+  const errBox = document.getElementById("fraud-phone-error");
+
+  if (!phone || phone.length !== 11) {
+    if (errBox) errBox.style.display = "block";
+    phoneInput.style.borderColor = "#dc2626";
+    toast("অনুগ্রহ করে সম্পূর্ণ ১১ ডিজিটের মোবাইল নম্বর দিন");
+    return;
+  }
+  if (errBox) errBox.style.display = "none";
+  phoneInput.style.borderColor = "";
 
   const resContainer = document.getElementById("fraud-result-container");
   resContainer.style.display = "block";
