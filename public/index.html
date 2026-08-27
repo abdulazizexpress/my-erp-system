@@ -444,12 +444,13 @@
         <table>
           <thead>
             <tr>
+              <th style="width:50px">Image</th>
               <th>Product Name</th>
               <th>SKU / Barcode</th>
               <th>Batches / Expiry</th>
               <th class="num admin-only-financial">Unit Cost (FIFO)</th>
               <th class="num">Sale Price</th>
-              <th class="num">Stock</th>
+              <th class="num font-bold">Stock</th>
               <th class="num">Alert Limit</th>
               <th class="num admin-only-financial">Stock Value</th>
               <th>Status / Alert</th>
@@ -1088,6 +1089,14 @@
   <div class="modal">
     <button class="close" data-close>✕</button>
     <h3 id="product-modal-title">Add / Update Product & FIFO Batches</h3>
+    <div class="field">
+      <label>প্রোডাক্ট ছবি আপলোড (স্বয়ংক্রিয়ভাবে কম্প্রেস হবে)</label>
+      <div class="row" style="align-items:center;">
+        <input type="file" id="f-prod-image" accept="image/*" onchange="handleProductImageUpload(event)" style="font-size:11px">
+        <button class="btn danger sm" type="button" onclick="removeProductImage()">Remove</button>
+      </div>
+      <div id="prod-image-preview-box" style="margin-top:6px;"></div>
+    </div>
     <div class="row">
       <div class="field"><label>Product Name</label><input id="f-prod-name"></div>
       <div class="field"><label>SKU / Barcode</label><input id="f-prod-sku" placeholder="Scan or Type SKU"></div>
@@ -1107,6 +1116,15 @@
       <button class="btn" id="btn-save-product">Save Product</button>
       <button class="btn ghost" data-close>Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- Fullsize Product Image Lightbox Modal -->
+<div class="modal-bg" id="modal-image-preview" onclick="closeImagePreview()">
+  <div class="modal" style="max-width:380px; text-align:center; padding:12px; background:var(--surface);" onclick="event.stopPropagation()">
+    <button class="close" onclick="closeImagePreview()">✕</button>
+    <h4 id="image-preview-title" style="margin-bottom:8px; font-size:13px; font-weight:700;">প্রোডাক্ট প্রিভিউ</h4>
+    <img id="preview-modal-img" src="" style="width:100%; max-height:350px; object-fit:contain; border-radius:8px; border:1px solid var(--line);">
   </div>
 </div>
 
