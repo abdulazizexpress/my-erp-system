@@ -8,6 +8,12 @@ const SESSION_KEY = "erp_active_user_session";
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 
+function yesterdayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 function defaultDB() {
   return {
     settings: {
@@ -148,13 +154,11 @@ async function syncFromBackend() {
     const res = await fetch(BACKEND_API_ENDPOINT);
     if (res.ok) {
       const serverData = await res.json();
-      // সার্ভারে যদি আসলেই কোনো সেভ করা প্রোডাক্ট থাকে তবেই কেবল সিঙ্ক করবে
       if (serverData && serverData.products && serverData.products.length > 0) {
         DB = serverData;
         localStorage.setItem(DB_KEY, JSON.stringify(DB));
         renderAll();
       } else {
-        // সার্ভার খালি থাকলে লোকাল ডেটা সার্ভারে পাঠিয়ে সেভ করে নিবে
         saveDB();
       }
     }
@@ -174,13 +178,57 @@ function money(n) {
 function toast(msg) {
   const wrap = document.getElementById("toast-wrap");
   if (!wrap) return;
-  const t = document.createElement("div"); t.textContent = msg;
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
   wrap.appendChild(t); setTimeout(() => t.remove(), 2500);
 }
 
 function statusBadge(s) {
   const map = { pending: "Pending", shipped: "Shipped", delivered: "Delivered", returned: "Returned", cancelled: "Cancelled" };
   return `<span class="badge b-${s}">${map[s] || s}</span>`;
+}
+
+/* =======================================================================
+   ACCURATE DATE PERIOD FILTER (TODAY, YESTERDAY, 7D, 30D, CUSTOM, ALL)
+======================================================================= */
+function getPeriodFilteredData(period, isReports = false) {
+  const today = todayStr();
+  const yest = yesterdayStr();
+  let ordList = DB.orders;
+  let expList = DB.expenses;
+
+  if (period === "today") {
+    ordList = DB.orders.filter(o => o.date === today);
+    expList = DB.expenses.filter(e => e.date === today);
+  } else if (period === "yesterday") {
+    ordList = DB.orders.filter(o => o.date === yest);
+    expList = DB.expenses.filter(e => e.date === yest);
+  } else if (period === "7days") {
+    const d = new Date(); d.setDate(d.getDate() - 7);
+    const minD = d.toISOString().slice(0, 10);
+    ordList = DB.orders.filter(o => o.date >= minD);
+    expList = DB.expenses.filter(e => e.date >= minD);
+  } else if (period === "30days") {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    const minD = d.toISOString().slice(0, 10);
+    ordList = DB.orders.filter(o => o.date >= minD);
+    expList = DB.expenses.filter(e => e.date >= minD);
+  } else if (period === "custom") {
+    const startInp = isReports ? document.getElementById("rep-start-date") : document.getElementById("dash-start-date");
+    const endInp = isReports ? document.getElementById("rep-end-date") : document.getElementById("dash-end-date");
+    
+    const start = startInp ? startInp.value : "";
+    const end = endInp ? endInp.value : "";
+
+    if (start && end) {
+      ordList = DB.orders.filter(o => o.date >= start && o.date <= end);
+      expList = DB.expenses.filter(e => e.date >= start && e.date <= end);
+    }
+  } else if (period === "all") {
+    // শুরু থেকে আজ পর্যন্ত সব অর্ডারের হিসাব
+    ordList = DB.orders;
+    expList = DB.expenses;
+  }
+  return { orders: ordList, expenses: expList };
 }
 
 /* =======================================================================
@@ -298,29 +346,23 @@ async function fetchLiveFraudDataFromAPI(phone) {
 ======================================================================= */
 function formatAndValidateFraudPhone(input) {
   let val = input.value || "";
-
-  // ১. বাংলা সংখ্যা টাইপ করলে সাথে সাথে ইংরেজিতে রূপান্তর
   const bnToEn = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
   val = val.replace(/[০-৯]/g, match => bnToEn[match]);
 
-  // ২. হাইফেন, স্পেস, ব্র্যাকেট, ড্যাশ ও সব নন-ডিজিট মুছে ফেলা
   let digits = val.replace(/[^0-9]/g, '');
 
-  // ৩. +88, 88 বা 0088 কান্ট্রি কোড সহ পেস্ট করলে তা স্বয়ংক্রিয়ভাবে মুছে ফেলা
   if (digits.startsWith("8801")) {
     digits = digits.slice(2);
   } else if (digits.startsWith("008801")) {
     digits = digits.slice(4);
   }
 
-  // ৪. অতিরিক্ত ডিজিট থাকলে কেটে ঠিক ১১ ডিজিটে সীমাবদ্ধ রাখা
   if (digits.length > 11) {
     digits = digits.slice(0, 11);
   }
 
   input.value = digits;
 
-  // ৫. ১১ ডিজিটের কম হলে লাল রঙের ওয়ার্নিং মেসেজ ও বর্ডার দেখানো
   const errBox = document.getElementById("fraud-phone-error");
   if (errBox) {
     if (digits.length > 0 && digits.length < 11) {
@@ -1506,37 +1548,8 @@ document.querySelectorAll("#dash-period button").forEach(b => {
   });
 });
 
-function getPeriodFilteredData(period) {
-  const today = todayStr();
-  let ordList = DB.orders;
-  let expList = DB.expenses;
-
-  if (period === "today") {
-    ordList = DB.orders.filter(o => o.date === today);
-    expList = DB.expenses.filter(e => e.date === today);
-  } else if (period === "7days") {
-    const d = new Date(); d.setDate(d.getDate() - 7);
-    const minD = d.toISOString().slice(0, 10);
-    ordList = DB.orders.filter(o => o.date >= minD);
-    expList = DB.expenses.filter(e => e.date >= minD);
-  } else if (period === "30days") {
-    const d = new Date(); d.setDate(d.getDate() - 30);
-    const minD = d.toISOString().slice(0, 10);
-    ordList = DB.orders.filter(o => o.date >= minD);
-    expList = DB.expenses.filter(e => e.date >= minD);
-  } else if (period === "custom") {
-    const start = document.getElementById("dash-start-date").value;
-    const end = document.getElementById("dash-end-date").value;
-    if (start && end) {
-      ordList = DB.orders.filter(o => o.date >= start && o.date <= end);
-      expList = DB.expenses.filter(e => e.date >= start && e.date <= end);
-    }
-  }
-  return { orders: ordList, expenses: expList };
-}
-
 function renderDashboard() {
-  const { orders, expenses } = getPeriodFilteredData(dashPeriod);
+  const { orders, expenses } = getPeriodFilteredData(dashPeriod, false);
 
   const delivered = orders.filter(o => o.status === "delivered");
   const returned = orders.filter(o => o.status === "returned");
@@ -1827,10 +1840,9 @@ function handleProductImageUpload(event) {
   reader.onload = function(e) {
     const img = new Image();
     img.onload = function() {
-      // ১. স্টেপ-ডাউন রিসাইজিং (ঘোলা হওয়া রোধ করার টেকনিক)
       let curWidth = img.width;
       let curHeight = img.height;
-      const targetWidth = 1000; // এইচডি ফুল ক্লিয়ার রেজোলিউশন
+      const targetWidth = 1000;
 
       let canvas = document.createElement("canvas");
       let ctx = canvas.getContext("2d");
@@ -1838,7 +1850,6 @@ function handleProductImageUpload(event) {
       canvas.height = curHeight;
       ctx.drawImage(img, 0, 0);
 
-      // ধাপে ধাপে সাইজ কমানো যাতে পিক্সেল না ফাটে
       while (curWidth * 0.5 > targetWidth) {
         curWidth = Math.round(curWidth * 0.5);
         curHeight = Math.round(curHeight * 0.5);
@@ -1853,7 +1864,6 @@ function handleProductImageUpload(event) {
         ctx = stepCtx;
       }
 
-      // ফাইনাল টার্গেট ক্যানভাস
       const finalCanvas = document.createElement("canvas");
       const finalHeight = Math.round((curHeight * targetWidth) / curWidth);
       finalCanvas.width = targetWidth;
@@ -1864,7 +1874,6 @@ function handleProductImageUpload(event) {
       finalCtx.imageSmoothingQuality = "high";
       finalCtx.drawImage(canvas, 0, 0, targetWidth, finalHeight);
 
-      // ২. ক্রিস্টাল ক্লিয়ার কোয়ালিটি ও শার্পনেস (WebP / High-Quality JPEG)
       try {
         currentProductImageBase64 = finalCanvas.toDataURL("image/webp", 0.92);
       } catch (err) {
@@ -2313,15 +2322,6 @@ function quickStatus(id, st) {
   renderOrders();
 }
 
-document.querySelectorAll("#order-tabs .tab").forEach(t => {
-  t.addEventListener("click", () => {
-    document.querySelectorAll("#order-tabs .tab").forEach(x => x.classList.remove("active"));
-    t.classList.add("active");
-    orderStatusFilter = t.dataset.s;
-    renderOrders();
-  });
-});
-
 const orderSearchInp = document.getElementById("order-search");
 if (orderSearchInp) {
   orderSearchInp.addEventListener("input", (e) => {
@@ -2667,7 +2667,7 @@ function deletePurchase(id) {
 }
 
 /* =======================================================================
-   REPORTS ENGINE
+   REPORTS CONTROLLER
 ======================================================================= */
 document.querySelectorAll(".rep-tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -2685,12 +2685,24 @@ document.querySelectorAll("#rep-period-pills button").forEach(btn => {
     document.querySelectorAll("#rep-period-pills button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     reportPeriod = btn.dataset.p;
+
+    const repCustomBox = document.getElementById("rep-custom-date-box");
+    if (reportPeriod === "custom") {
+      if (repCustomBox) repCustomBox.style.display = "flex";
+      if (!document.getElementById("rep-start-date").value) {
+        const d = new Date(); d.setDate(d.getDate() - 30);
+        document.getElementById("rep-start-date").value = d.toISOString().slice(0, 10);
+        document.getElementById("rep-end-date").value = todayStr();
+      }
+    } else {
+      if (repCustomBox) repCustomBox.style.display = "none";
+    }
     renderReports();
   });
 });
 
 function renderReports() {
-  const { orders, expenses } = getPeriodFilteredData(reportPeriod);
+  const { orders, expenses } = getPeriodFilteredData(reportPeriod, true);
   const delivered = orders.filter(o => o.status === "delivered");
   const returned = orders.filter(o => o.status === "returned");
 
@@ -2728,7 +2740,7 @@ function renderReports() {
   const breakdownTbody = document.getElementById("rep-detailed-breakdown");
   if (breakdownTbody) {
     breakdownTbody.innerHTML = `
-      <tr><td><b>Revenue (মোট বিক্রয়)</b></td><td class="num pos">+${money(revenue)}</td><td class="num">100%</td></tr>
+      <tr><td><b>Revenue (মোট বিক্রয়)</b></td><td class="num pos">+${money(revenue)}</td><td class="num">100%</td></tr>
       <tr><td><b>Product Cost (FIFO COGS)</b></td><td class="num neg">-${money(cogs)}</td><td class="num">${pCogs}%</td></tr>
       <tr><td><b>লজিস্টিক ও অন্যান্য খরচ</b></td><td class="num neg">-${money(totalExp)}</td><td class="num">${pExp}%</td></tr>
       <tr style="font-weight:800; background:var(--surface-2)"><td>নিট মুনাফা (NET PROFIT)</td><td class="num ${netProfit >= 0 ? 'pos' : 'neg'}">${money(netProfit)}</td><td class="num">${marginPct}%</td></tr>
@@ -2740,7 +2752,7 @@ function renderReports() {
 }
 
 function renderProductReport() {
-  const { orders } = getPeriodFilteredData(reportPeriod);
+  const { orders } = getPeriodFilteredData(reportPeriod, true);
   const pMap = {};
   orders.forEach(o => {
     if (o.items) {
@@ -2801,7 +2813,7 @@ function renderPackagingReport(orders) {
 }
 
 function exportProfitCSV() {
-  const { orders, expenses } = getPeriodFilteredData(reportPeriod);
+  const { orders, expenses } = getPeriodFilteredData(reportPeriod, true);
   const rev = orders.filter(o => o.status === "delivered").reduce((s, o) => s + o.grandTotal, 0);
   downloadCSV(`Revenue,${rev}\nExpenses,${expenses.reduce((s, e) => s + Number(e.amount || 0), 0)}\n`, "Profit_Report.csv");
 }
