@@ -56,7 +56,7 @@ function defaultDB() {
     ],
     products: [
       {
-        id: 1, name: "COSRX Snail 96 Mucin", sku: "COS-01", sellPrice: 1550, stock: 45, alertLimit: 20,
+        id: 1, name: "COSRX Snail 96 Mucin", sku: "COS-01", sellPrice: 1550, stock: 45, alertLimit: 20, image: "",
         batches: [
           { batchNo: "BATCH-2026-A", qty: 25, cost: 1120, expiryDate: "2027-08-15" },
           { batchNo: "BATCH-2026-B", qty: 20, cost: 1150, expiryDate: "2027-11-20" }
@@ -64,7 +64,7 @@ function defaultDB() {
         costHistory: [{ cost: 1150, date: todayStr() }]
       },
       {
-        id: 2, name: "Beauty of Joseon Sunscreen", sku: "BOJ-02", sellPrice: 1200, stock: 10, alertLimit: 15,
+        id: 2, name: "Beauty of Joseon Sunscreen", sku: "BOJ-02", sellPrice: 1200, stock: 10, alertLimit: 15, image: "",
         batches: [
           { batchNo: "BOJ-LOT-01", qty: 10, cost: 820, expiryDate: "2026-09-10" }
         ],
@@ -172,6 +172,21 @@ function toast(msg) {
 function statusBadge(s) {
   const map = { pending: "Pending", shipped: "Shipped", delivered: "Delivered", returned: "Returned", cancelled: "Cancelled" };
   return `<span class="badge b-${s}">${map[s] || s}</span>`;
+}
+
+/* =======================================================================
+   IMAGE LIGHTBOX / MODAL PREVIEW
+======================================================================= */
+function openImagePreview(imgSrc, title) {
+  if (!imgSrc) return;
+  document.getElementById("preview-modal-img").src = imgSrc;
+  document.getElementById("image-preview-title").textContent = title || "প্রোডাক্ট প্রিভিউ";
+  openModal("modal-image-preview");
+}
+
+function closeImagePreview() {
+  closeModal("modal-image-preview");
+  document.getElementById("preview-modal-img").src = "";
 }
 
 /* =======================================================================
@@ -1791,11 +1806,64 @@ function deleteWholesale(id) {
 }
 
 /* =======================================================================
-   PRODUCTS & FIFO BATCHES CONTROLLER
+   PRODUCT IMAGE COMPRESSOR & FIFO CONTROLLER
 ======================================================================= */
+let currentProductImageBase64 = "";
+
+function handleProductImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // 2MB বা বড় ছবিকে অটোমেটিক কম্প্রেস করে মাত্র ৩০-৪০ KB করা
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      
+      const maxDim = 200; // থাম্বনেইলের জন্য সর্বোচ্চ সাইজ
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxDim) {
+          height *= maxDim / width;
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width *= maxDim / height;
+          height = maxDim;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      currentProductImageBase64 = canvas.toDataURL("image/jpeg", 0.7);
+      document.getElementById("prod-image-preview-box").innerHTML = `
+        <img src="${currentProductImageBase64}" style="width:48px;height:48px;border-radius:6px;object-fit:cover;border:1px solid var(--line);">
+      `;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeProductImage() {
+  currentProductImageBase64 = "";
+  document.getElementById("f-prod-image").value = "";
+  document.getElementById("prod-image-preview-box").innerHTML = "";
+}
+
 function openNewProductModal() {
   editingProductId = null;
+  currentProductImageBase64 = "";
   document.getElementById("product-modal-title").textContent = "Add New Product & Batch";
+  document.getElementById("f-prod-image").value = "";
+  document.getElementById("prod-image-preview-box").innerHTML = "";
   document.getElementById("f-prod-name").value = "";
   document.getElementById("f-prod-sku").value = "";
   document.getElementById("f-prod-sell").value = "";
@@ -1812,7 +1880,13 @@ function editProduct(id) {
   const p = DB.products.find(x => x.id === id);
   if (!p) return;
   editingProductId = id;
+  currentProductImageBase64 = p.image || "";
+
   document.getElementById("product-modal-title").textContent = "Edit Product — " + p.name;
+  document.getElementById("f-prod-image").value = "";
+  document.getElementById("prod-image-preview-box").innerHTML = currentProductImageBase64 
+    ? `<img src="${currentProductImageBase64}" style="width:48px;height:48px;border-radius:6px;object-fit:cover;border:1px solid var(--line);">` 
+    : "";
   document.getElementById("f-prod-name").value = p.name;
   document.getElementById("f-prod-sku").value = p.sku || "";
   document.getElementById("f-prod-sell").value = p.sellPrice;
@@ -1851,6 +1925,7 @@ document.getElementById("btn-save-product").addEventListener("click", () => {
     p.sellPrice = sell; 
     p.stock = stock; 
     p.alertLimit = alertLimit;
+    p.image = currentProductImageBase64;
     
     if (p.batches && p.batches.length > 0) {
       p.batches[0].cost = cost;
@@ -1861,15 +1936,16 @@ document.getElementById("btn-save-product").addEventListener("click", () => {
     p.costHistory.push({ cost, date: todayStr() });
 
     logActivity("Product Edit", `Updated product: ${name} (Unit Cost: ৳${cost})`);
-    toast("প্রোডাক্ট ও ইউনিট কস্ট আপডেট হয়েছে");
+    toast("প্রোডাক্ট ও ইমেজ সফলভাবে আপডেট হয়েছে");
   } else {
     DB.products.push({
       id: Date.now(), name, sku, sellPrice: sell, stock, alertLimit,
+      image: currentProductImageBase64,
       batches: [{ batchNo, qty: stock, cost, expiryDate }],
       costHistory: [{ cost, date: todayStr() }]
     });
     logActivity("Product Create", `Created product: ${name} (Unit Cost: ৳${cost})`);
-    toast("নতুন প্রোডাক্ট ও ব্যাচ যোগ হয়েছে");
+    toast("নতুন প্রোডাক্ট ও ইমেজ যুক্ত হয়েছে");
   }
 
   saveDB(); closeModal("modal-product"); renderProducts();
@@ -1922,8 +1998,13 @@ function renderProducts() {
     if (p.stock <= 0) stockBadge = `<span class="badge b-out-stock">🔴 Out of Stock</span>`;
     else if (p.stock <= limit) stockBadge = `<span class="badge b-low-stock">🟡 Low Stock</span>`;
 
+    const imgTag = p.image 
+      ? `<img src="${p.image}" onclick="openImagePreview('${p.image}', '${p.name.replace(/'/g, "\\'")}')" style="width:38px;height:38px;border-radius:6px;object-fit:cover;border:1px solid var(--line);vertical-align:middle;cursor:zoom-in;" title="বড় দেখতে ক্লিক করুন">` 
+      : `<div style="width:38px;height:38px;border-radius:6px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:16px;">📦</div>`;
+
     return `
       <tr>
+        <td style="text-align:center; padding:6px;">${imgTag}</td>
         <td><b>${p.name}</b></td>
         <td class="mono muted">${p.sku || "—"}</td>
         <td style="font-size:11px">${batchInfo}</td>
@@ -1940,7 +2021,6 @@ function renderProducts() {
       </tr>`;
   }).join("");
 
-  // টেবিল হেডার হাইড/শো হ্যান্ডলিং
   document.querySelectorAll(".admin-only-financial").forEach(el => {
     el.style.display = isAdmin ? "" : "none";
   });
