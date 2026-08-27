@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- Primary Meta Tags -->
   <title>Noorish — Enterprise ERP System</title>
   <meta name="title" content="Noorish — Enterprise ERP System">
   <meta name="description" content="Business Management & Order Tracking Suite">
   <meta name="robots" content="index, follow">
 
-  <!-- Open Graph / Facebook / Messenger / WhatsApp Preview -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://noorish-erp-system.onrender.com/">
   <meta property="og:site_name" content="Noorish ERP">
@@ -20,22 +18,13 @@
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
 
-  <!-- Twitter Meta Tags -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://noorish-erp-system.onrender.com/">
-  <meta property="twitter:title" content="Noorish — Enterprise ERP System">
-  <meta property="twitter:description" content="Business Management & Order Tracking Suite">
-  <meta property="twitter:image" content="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80">
-
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <!-- HTML5 QR / Barcode Camera Scanner Library -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body class="light-mode">
 
-<!-- Authentication Screen Overlay (Session Security) -->
 <div id="auth-overlay" class="auth-overlay" style="display:none;">
   <div class="auth-card card">
     <div class="brand-display" style="justify-content:center; margin-bottom:14px;">
@@ -53,7 +42,6 @@
   </div>
 </div>
 
-<!-- Top Navigation & Global Header Bar -->
 <header class="app-header">
   <div class="header-left">
     <button id="btn-open-sidebar" class="mobile-toggle-btn" aria-label="Open Menu">
@@ -70,7 +58,6 @@
     </div>
   </div>
 
-  <!-- Global Omni-Search Bar -->
   <div class="header-center">
     <div class="omni-search-wrapper">
       <i class="fa-solid fa-magnifying-glass search-icon"></i>
@@ -79,7 +66,6 @@
     </div>
   </div>
 
-  <!-- Header Right Actions & Notifications -->
   <div class="header-right">
     <button class="icon-action-btn" onclick="openCameraScanner('global')" title="Scan Barcode / SKU"><i class="fa-solid fa-barcode"></i></button>
     <div class="user-pill-badge" id="current-user-badge">
@@ -108,7 +94,6 @@
 <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
 <div class="app">
-  <!-- SIDEBAR -->
   <aside class="sidebar" id="app-sidebar">
     <div class="brand-sidebar-header">
       <div class="brand-text">
@@ -136,10 +121,9 @@
     </div>
   </aside>
 
-  <!-- MAIN VIEW CONTAINER -->
   <main class="main">
 
-    <!-- 1. DASHBOARD -->
+    <!-- DASHBOARD -->
     <section class="view active" id="view-dashboard">
       <div class="topbar">
         <div>
@@ -149,10 +133,10 @@
         
         <div class="date-filter-group">
           <div class="period-switch" id="dash-period">
-            <button data-p="today">Today</button>
+            <button data-p="today" class="active">Today</button>
             <button data-p="yesterday">Yesterday</button>
             <button data-p="7days">7 Days</button>
-            <button data-p="30days" class="active">30 Days</button>
+            <button data-p="30days">30 Days</button>
             <button data-p="custom">Custom</button>
             <button data-p="all">All Time</button>
           </div>
@@ -219,7 +203,7 @@
       </div>
     </section>
 
-    <!-- 2. COURIER MANAGEMENT & COD RECONCILIATION -->
+    <!-- COURIERS -->
     <section class="view" id="view-couriers">
       <div class="topbar">
         <div>
@@ -280,7 +264,7 @@
       </div>
     </section>
 
-    <!-- NEW SECTION: LIVE FRAUD CHECKER (API) -->
+    <!-- FRAUD CHECKER -->
     <section class="view" id="view-fraud-checker">
       <div class="topbar">
         <div>
@@ -303,11 +287,10 @@
         </div>
       </div>
 
-      <!-- Live Result Display Container -->
       <div id="fraud-result-container" style="display:none;"></div>
     </section>
 
-    <!-- 3. ORDERS -->
+    <!-- ORDERS -->
     <section class="view" id="view-orders">
       <div class="topbar">
         <div>
@@ -370,7 +353,7 @@
       </div>
     </section>
 
-    <!-- 4. WHOLESALE -->
+    <!-- WHOLESALE -->
     <section class="view" id="view-wholesale">
       <div class="topbar">
         <div>
@@ -422,7 +405,7 @@
       </div>
     </section>
 
-    <!-- 5. PRODUCTS, BATCHES (FIFO) & STOCK ALERT -->
+    <!-- PRODUCTS -->
     <section class="view" id="view-products">
       <div class="topbar">
         <div>
@@ -463,7 +446,7 @@
       </div>
     </section>
 
-    <!-- 6. PACKAGING -->
+    <!-- PACKAGING -->
     <section class="view" id="view-packaging">
       <div class="topbar">
         <div>
@@ -497,7 +480,7 @@
       </div>
     </section>
 
-    <!-- 7. ACCOUNTING -->
+    <!-- ACCOUNTING -->
     <section class="view" id="view-accounting">
       <div class="topbar">
         <div>
@@ -519,7 +502,6 @@
         <div class="tab" data-sub="meta">Meta Ads Automation</div>
       </div>
 
-      <!-- Summary -->
       <div id="acc-sub-summary" class="acc-sub-view">
         <div class="grid g-4" style="margin-bottom:14px">
           <div class="card stat stat-green"><div class="label">Total Income (Delivered)</div><div class="value" id="acc-tot-inc">৳0</div><div class="stub">💰</div></div>
@@ -537,7 +519,6 @@
         </div>
       </div>
 
-      <!-- Purchase History -->
       <div id="acc-sub-purchases" class="acc-sub-view" style="display:none">
         <div class="tbl-wrap">
           <table>
@@ -551,7 +532,6 @@
         </div>
       </div>
 
-      <!-- Courier Payments -->
       <div id="acc-sub-courier-pay" class="acc-sub-view" style="display:none">
         <div class="grid g-4" style="margin-bottom:14px">
           <div class="card stat stat-purple"><div class="label">Steadfast Delivered</div><div class="value" id="courier-val-steadfast">৳0</div><div class="stub">🚚</div></div>
@@ -567,7 +547,6 @@
         </div>
       </div>
 
-      <!-- Staff Payments -->
       <div id="acc-sub-staff" class="acc-sub-view" style="display:none">
         <div class="toolbar">
           <div class="section-title" style="margin:0">Staff Salary History</div>
@@ -581,7 +560,6 @@
         </div>
       </div>
 
-      <!-- Office Expenses -->
       <div id="acc-sub-office" class="acc-sub-view" style="display:none">
         <div class="toolbar">
           <div class="section-title" style="margin:0">Office Rent & Utilities</div>
@@ -595,7 +573,6 @@
         </div>
       </div>
 
-      <!-- Meta Ads Spend Converter -->
       <div id="acc-sub-meta" class="acc-sub-view" style="display:none">
         <div class="card" style="background:var(--surface-2); margin-bottom:14px">
           <h3 style="font-size:14px; margin-bottom:6px">⚡ Meta Ads Spend Converter (USD to BDT)</h3>
@@ -609,7 +586,7 @@
       </div>
     </section>
 
-    <!-- 8. CUSTOMERS & FRAUD PROTECTION -->
+    <!-- CUSTOMERS -->
     <section class="view" id="view-customers">
       <div class="topbar">
         <div>
@@ -642,7 +619,7 @@
       </div>
     </section>
 
-    <!-- 9. STAFF & PERMISSIONS SYSTEM -->
+    <!-- USERS -->
     <section class="view" id="view-users">
       <div class="topbar">
         <div>
@@ -668,16 +645,16 @@
       </div>
     </section>
 
-    <!-- 10. REPORTS -->
+    <!-- REPORTS -->
     <section class="view" id="view-reports">
       <div class="report-header-box">
         <div class="report-main-title"><i class="fa-solid fa-chart-line text-indigo-600"></i> Reports & Financial Audit</div>
         <div class="report-filter-wrapper">
           <div class="period-pills" id="rep-period-pills">
-            <button class="pill-btn" data-p="today">Today</button>
+            <button class="pill-btn active" data-p="today">Today</button>
             <button class="pill-btn" data-p="yesterday">Yesterday</button>
             <button class="pill-btn" data-p="7days">7 Days</button>
-            <button class="pill-btn active" data-p="30days">30 Days</button>
+            <button class="pill-btn" data-p="30days">30 Days</button>
             <button class="pill-btn" data-p="custom">Custom</button>
             <button class="pill-btn" data-p="all">All Time</button>
           </div>
@@ -699,7 +676,6 @@
         <button class="rep-tab-btn" data-target="export-center">Export Center</button>
       </div>
 
-      <!-- Profit Report -->
       <div id="rep-view-profit-report" class="rep-view-content">
         <div class="rep-cards-grid">
           <div class="card stat stat-green">
@@ -751,7 +727,6 @@
         </div>
       </div>
 
-      <!-- Order Journey Flow -->
       <div id="rep-view-order-report" class="rep-view-content" style="display:none">
         <div class="rep-section-box">
           <div class="rep-box-title">Order Status Journey Flow</div>
@@ -759,7 +734,6 @@
         </div>
       </div>
 
-      <!-- Product Report -->
       <div id="rep-view-product-report" class="rep-view-content" style="display:none">
         <div class="rep-section-box">
           <div class="toolbar" style="margin-bottom:12px">
@@ -774,7 +748,6 @@
         </div>
       </div>
 
-      <!-- Courier Report -->
       <div id="rep-view-courier-report" class="rep-view-content" style="display:none">
         <div class="rep-section-box">
           <table class="rep-table">
@@ -786,7 +759,6 @@
         </div>
       </div>
 
-      <!-- Packaging Report -->
       <div id="rep-view-packaging-report" class="rep-view-content" style="display:none">
         <div class="rep-cards-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:14px">
           <div class="card stat stat-blue"><div class="label">মোট ব্যবহার</div><div class="value" id="pack-rep-used-units">0 pcs</div><div class="stub">📦</div></div>
@@ -803,7 +775,6 @@
         </div>
       </div>
 
-      <!-- Export Center -->
       <div id="rep-view-export-center" class="rep-view-content" style="display:none">
         <div class="rep-section-box">
           <div class="rep-box-title">CSV Export Center</div>
@@ -817,7 +788,7 @@
       </div>
     </section>
 
-    <!-- 11. AUDIT & ACTIVITY LOG -->
+    <!-- ACTIVITY -->
     <section class="view" id="view-activity">
       <div class="topbar">
         <div>
@@ -842,7 +813,7 @@
       </div>
     </section>
 
-    <!-- 12. SETTINGS -->
+    <!-- SETTINGS -->
     <section class="view" id="view-settings">
       <div class="topbar">
         <div>
@@ -852,7 +823,6 @@
       </div>
 
       <div class="grid g-2">
-        <!-- Live Courier & Fraud API Settings -->
         <div class="card">
           <h3 style="margin-top:0"><i class="fa-solid fa-shield-halved text-rose-600"></i> 🛡️ Fraud Checker & Courier API</h3>
           <div class="field"><label>Fraud Checker API Key</label><input type="password" id="set-fraud-api-key" placeholder="fraud_api_key_..."></div>
@@ -867,7 +837,6 @@
           <button class="btn" onclick="saveShippingRules()">Save API & Shipping Rules</button>
         </div>
 
-        <!-- Branding & Profile Settings -->
         <div class="card">
           <h3 style="margin-top:0"><i class="fa-solid fa-paintbrush text-purple"></i> ব্র্যান্ডিং ও লোগো কাস্টমাইজেশন</h3>
           <div class="field"><label>প্ল্যাটফর্মের নাম</label><input id="set-branding-name" placeholder="SKM Flow"></div>
@@ -891,7 +860,6 @@
       </div>
 
       <div class="grid g-2" style="margin-top:14px">
-        <!-- Section Titles Customizer -->
         <div class="card">
           <h3 style="margin-top:0"><i class="fa-solid fa-pen-to-square text-indigo"></i> ড্যাশবোর্ড সেকশনের নাম এডিট</h3>
           <div class="row">
@@ -913,7 +881,6 @@
           <button class="btn ghost" onclick="saveSectionTitles()">Update Section Names</button>
         </div>
 
-        <!-- Backup & Data Restore -->
         <div class="card">
           <h3 style="margin-top:0"><i class="fa-solid fa-cloud-arrow-down text-emerald"></i> Data Backup & System Restore</h3>
           <p class="muted" style="font-size:12px">অফলাইন JSON ব্যাকআপ ফাইল দিয়ে পুরো ডাটাবেজ এক ক্লিকে রিকভার করা যাবে।</p>
@@ -932,15 +899,12 @@
   </main>
 </div>
 
-<!-- ==================== MODALS ==================== -->
-
-<!-- Order Modal with Live Fraud API Check, AI Auto-fill, Dynamic Shipping & Live Link -->
+<!-- MODALS -->
 <div class="modal-bg" id="modal-order">
   <div class="modal modal-lg">
     <button class="close" data-close>✕</button>
     <h3 id="order-modal-title">New Order Entry</h3>
 
-    <!-- AI Auto-fill Box -->
     <div style="background:var(--purple-soft); padding:10px; border-radius:8px; border:1px dashed var(--purple); margin: 8px 0;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
         <label style="font-size:11.5px; font-weight:700; color:var(--purple-dark)">✨ AI Auto-fill (Paste Msg)</label>
@@ -949,7 +913,6 @@
       <textarea id="ai-paste-box" rows="2" placeholder="কাস্টমার মেসেজ পেস্ট করুন..." style="width:100%; border:1px solid var(--line); border-radius:6px; padding:6px; font-size:12px"></textarea>
     </div>
 
-    <!-- Fraud & Risk Score Badge Alert (Live API Integrated) -->
     <div id="customer-risk-indicator" style="display:none; padding:8px 12px; border-radius:6px; margin-bottom:8px; font-weight:700; font-size:12px;"></div>
 
     <div class="row">
@@ -981,7 +944,6 @@
       <div class="field"><label>Address</label><input id="f-order-address" placeholder="Address"></div>
     </div>
 
-    <!-- Dynamic Shipping Calculation Rule Selector -->
     <div class="row" style="background:var(--surface-2); padding:8px; border-radius:6px;">
       <div class="field">
         <label>Delivery Area</label>
@@ -1027,7 +989,7 @@
         <select id="f-order-status">
           <option value="pending">Pending</option>
           <option value="shipped">Shipped</option>
-          <option value="delivered">Delivered (Auto Stock & Profit Sync)</option>
+          <option value="delivered">Delivered</option>
           <option value="returned">Returned</option>
           <option value="cancelled">Cancelled</option>
         </select>
@@ -1044,7 +1006,18 @@
   </div>
 </div>
 
-<!-- Camera Barcode Scanner Modal -->
+<!-- Order Preview Modal (প্যাকেজিং টিম ও পাইকারির জন্য) -->
+<div class="modal-bg" id="modal-order-preview">
+  <div class="modal">
+    <button class="close" data-close>✕</button>
+    <h3 id="preview-modal-invoice-title">Order Preview Details</h3>
+    <div id="order-preview-content" style="margin: 12px 0; font-size: 13px; line-height: 1.5;"></div>
+    <div class="row" style="justify-content: flex-end;">
+      <button class="btn ghost" data-close>Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-scanner">
   <div class="modal">
     <button class="close" data-close onclick="stopCameraScanner()">✕</button>
@@ -1056,7 +1029,6 @@
   </div>
 </div>
 
-<!-- COD Reconciliation Settlement Modal -->
 <div class="modal-bg" id="modal-cod-reconciliation">
   <div class="modal">
     <button class="close" data-close>✕</button>
@@ -1086,7 +1058,6 @@
   </div>
 </div>
 
-<!-- Product Modal with FIFO Batches & Expiry -->
 <div class="modal-bg" id="modal-product">
   <div class="modal">
     <button class="close" data-close>✕</button>
@@ -1121,7 +1092,6 @@
   </div>
 </div>
 
-<!-- Fullsize Product Image Lightbox Modal -->
 <div class="modal-bg" id="modal-image-preview" onclick="closeImagePreview()">
   <div class="modal" style="max-width:500px; width:92%; text-align:center; padding:14px; background:var(--surface); border-radius:12px;" onclick="event.stopPropagation()">
     <button class="close" onclick="closeImagePreview()">✕</button>
@@ -1130,7 +1100,6 @@
   </div>
 </div>
 
-<!-- Purchase Modal with Batch & Supplier -->
 <div class="modal-bg" id="modal-purchase">
   <div class="modal">
     <button class="close" data-close>✕</button>
@@ -1160,7 +1129,6 @@
   </div>
 </div>
 
-<!-- Wholesale Modal -->
 <div class="modal-bg" id="modal-wholesale">
   <div class="modal modal-lg">
     <button class="close" data-close>✕</button>
@@ -1183,7 +1151,7 @@
         </select>
       </div>
       <div class="field"><label>Tracking ID / CN No.</label><input id="f-ws-tracking"></div>
-      <div class="field"><label>Courier Charge (৳)</label><input type="number" id="f-ws-courier-cost" value="0" oninput="calculateWholesaleFinancials()"></div>
+      <div class="field"><label>Courier Cost (৳)</label><input type="number" id="f-ws-courier-cost" value="0" oninput="calculateWholesaleFinancials()"></div>
       <div class="field"><label>Packaging Cost (৳)</label><input type="number" id="f-ws-packaging-cost" value="0" oninput="calculateWholesaleFinancials()"></div>
     </div>
     <div style="background:var(--surface-2); padding:10px; border-radius:8px; margin: 8px 0;">
@@ -1220,7 +1188,6 @@
   </div>
 </div>
 
-<!-- Packaging Modal -->
 <div class="modal-bg" id="modal-packaging">
   <div class="modal">
     <button class="close" data-close>✕</button>
@@ -1238,7 +1205,6 @@
   </div>
 </div>
 
-<!-- Expense Modal -->
 <div class="modal-bg" id="modal-expense">
   <div class="modal">
     <button class="close" data-close>✕</button>
@@ -1265,7 +1231,6 @@
   </div>
 </div>
 
-<!-- User Account & Permission Modal -->
 <div class="modal-bg" id="modal-user">
   <div class="modal">
     <button class="close" data-close>✕</button>
@@ -1304,7 +1269,6 @@
   </div>
 </div>
 
-<!-- Profile Password & Security Modal -->
 <div class="modal-bg" id="modal-security">
   <div class="modal">
     <button class="close" data-close>✕</button>
@@ -1319,7 +1283,6 @@
   </div>
 </div>
 
-<!-- Blacklist Modal -->
 <div class="modal-bg" id="modal-blacklist">
   <div class="modal">
     <button class="close" data-close>✕</button>
@@ -1333,7 +1296,6 @@
   </div>
 </div>
 
-<!-- Print Modal (Single & Bulk Invoices / 3x3 Thermal Stickers) -->
 <div class="modal-bg" id="modal-print">
   <div class="modal">
     <button class="close" data-close>✕</button>
