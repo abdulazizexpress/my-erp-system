@@ -1818,36 +1818,49 @@ function handleProductImageUpload(event) {
   reader.onload = function(e) {
     const img = new Image();
     img.onload = function() {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      
-      // HD শার্প রেজোলিউশনের জন্য সর্বোচ্চ সাইজ ৮০০ পিক্সেল
-      const maxDim = 800; 
-      let width = img.width;
-      let height = img.height;
+      // ১. স্টেপ-ডাউন রিসাইজিং (ঘোলা হওয়া রোধ করার টেকনিক)
+      let curWidth = img.width;
+      let curHeight = img.height;
+      const targetWidth = 1000; // এইচডি ফুল ক্লিয়ার রেজোলিউশন
 
-      if (width > height) {
-        if (width > maxDim) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        }
-      } else {
-        if (height > maxDim) {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
+      let canvas = document.createElement("canvas");
+      let ctx = canvas.getContext("2d");
+      canvas.width = curWidth;
+      canvas.height = curHeight;
+      ctx.drawImage(img, 0, 0);
+
+      // ধাপে ধাপে সাইজ কমানো যাতে পিক্সেল না ফাটে
+      while (curWidth * 0.5 > targetWidth) {
+        curWidth = Math.round(curWidth * 0.5);
+        curHeight = Math.round(curHeight * 0.5);
+        const stepCanvas = document.createElement("canvas");
+        stepCanvas.width = curWidth;
+        stepCanvas.height = curHeight;
+        const stepCtx = stepCanvas.getContext("2d");
+        stepCtx.imageSmoothingEnabled = true;
+        stepCtx.imageSmoothingQuality = "high";
+        stepCtx.drawImage(canvas, 0, 0, curWidth, curHeight);
+        canvas = stepCanvas;
+        ctx = stepCtx;
       }
 
-      canvas.width = width;
-      canvas.height = height;
+      // ফাইনাল টার্গেট ক্যানভাস
+      const finalCanvas = document.createElement("canvas");
+      const finalHeight = Math.round((curHeight * targetWidth) / curWidth);
+      finalCanvas.width = targetWidth;
+      finalCanvas.height = finalHeight;
+      const finalCtx = finalCanvas.getContext("2d");
 
-      // ক্রিস্টাল ক্লিয়ার ইমেজ রেন্ডারিং সেটিংস
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, 0, 0, width, height);
+      finalCtx.imageSmoothingEnabled = true;
+      finalCtx.imageSmoothingQuality = "high";
+      finalCtx.drawImage(canvas, 0, 0, targetWidth, finalHeight);
 
-      // ৮৫% হাই-কোয়ালিটি শার্পনেস
-      currentProductImageBase64 = canvas.toDataURL("image/jpeg", 0.85);
+      // ২. ক্রিস্টাল ক্লিয়ার কোয়ালিটি ও শার্পনেস (WebP / High-Quality JPEG)
+      try {
+        currentProductImageBase64 = finalCanvas.toDataURL("image/webp", 0.92);
+      } catch (err) {
+        currentProductImageBase64 = finalCanvas.toDataURL("image/jpeg", 0.90);
+      }
       
       document.getElementById("prod-image-preview-box").innerHTML = `
         <img src="${currentProductImageBase64}" style="width:48px;height:48px;border-radius:6px;object-fit:cover;border:1px solid var(--line);">
