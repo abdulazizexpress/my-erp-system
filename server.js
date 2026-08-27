@@ -1,24 +1,37 @@
 const express = require("express");
-const fs = require("fs");
 const path = require("path");
+const fs = require("fs");
 const cors = require("cors");
 const https = require("https");
+const mongoose = require("mongoose");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const DB_FILE = path.join(__dirname, "database.json");
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(__dirname));
 
-// ডাটাবেজ ফাইল ইনিশিয়ালাইজেশন (যদি না থাকে তবে বেসিক স্ট্রাকচার তৈরি করবে)[cite: 15]
-if (!fs.existsSync(DB_FILE)) {
-  fs.writeFileSync(DB_FILE, JSON.stringify({ orders: [], products: [], settings: {}, users: [], packaging: [], purchases: [], wholesale: [], activityLogs: [], blacklist: [], expenses: [], codSettlements: [] }), "utf8");[cite: 15]
-}
+// --- MONGODB ATLAS CLOUD DATABASE CONNECTION ---
+const MONGODB_URI = process.env.MONGODB_URI;
 
-// হোম পেজ সার্ভার রুট[cite: 15]
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log("Connected to MongoDB Atlas Cloud Database Successfully!");
+}).catch(err => {
+  console.error("MongoDB Connection Error:", err);
+});
+
+const AppDataSchema = new mongoose.Schema({
+  key: { type: String, unique: true, default: "main_database" },
+  payload: { type: Object, default: {} }
+}, { timestamps: true });
+
+const AppData = mongoose.model("AppData", AppDataSchema);
+
 app.get("/", (req, res) => {
   const publicPath = path.join(__dirname, "public", "index.html");
   const rootPath = path.join(__dirname, "index.html");
@@ -27,39 +40,41 @@ app.get("/", (req, res) => {
   else res.send("<h2>index.html পাওয়া যায়নি</h2>");
 });
 
-// Continuous Data Read (ফাইল করাপ্ট হওয়া রোধ করতে সেফ রিড)[cite: 15]
-app.get("/api/data", (req, res) => {
-  fs.readFile(DB_FILE, "utf8", (err, data) => {
-    if (err || !data) {
-      return res.json({ orders: [], products: [], settings: {}, users: [], packaging: [], purchases: [], wholesale: [], activityLogs: [], blacklist: [], expenses: [], codSettlements: [] });
+app.get("/api/data", async (req, res) => {
+  try {
+    let doc = await AppData.findOne({ key: "main_database" });
+    if (!doc) {
+      doc = await AppData.create({ key: "main_database", payload: {} });
     }
-    try { 
-      res.json(JSON.parse(data)); 
-    } catch (e) { 
-      res.json({}); 
-    }
-  });
-});
-
-// Continuous Data Save (ফাইল রাইটিং নিশ্চিত করা)[cite: 15]
-app.post("/api/data", (req, res) => {
-  const incomingData = req.body;
-  if (!incomingData || Object.keys(incomingData).length === 0) {
-    return res.status(400).json({ error: "Invalid empty data payload" });
+    res.json(doc.payload || {});
+  } catch (err) {
+    res.status(500).json({ error: "Failed to read from MongoDB Atlas" });
   }
-
-  fs.writeFile(DB_FILE, JSON.stringify(incomingData, null, 2), "utf8", (err) => {
-    if (err) return res.status(500).json({ error: "Failed to save database" });
-    res.json({ success: true, message: "Data saved successfully" });
-  });
 });
 
-// BD Courier Bulletproof Proxy[cite: 15]
+app.post("/api/data", async (req, res) => {
+  try {
+    const incomingData = req.body;
+    if (!incomingData || Object.keys(incomingData).length === 0) {
+      return res.status(400).json({ error: "Invalid empty data payload" });
+    }
+
+    await AppData.findOneAndUpdate(
+      { key: "main_database" },
+      { payload: incomingData },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, message: "Data saved to MongoDB Atlas successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save to MongoDB Atlas" });
+  }
+});
+
 app.post("/api/check-fraud-proxy", (req, res) => {
   const { phone, apiKey } = req.body;
   const rawKey = (apiKey || "").trim().replace(/^Bearer\s+/i, "");
   const targetPhone = (phone || "").trim();
-
   const postData = JSON.stringify({ phone: targetPhone });
 
   const options = {
@@ -94,7 +109,6 @@ app.post("/api/check-fraud-proxy", (req, res) => {
   proxyReq.end();
 });
 
-// Render Port Binding with 0.0.0.0 Host[cite: 15]
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running at port: ${PORT}`);
 });
