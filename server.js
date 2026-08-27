@@ -16,10 +16,7 @@ app.use(express.static(__dirname));
 // --- MONGODB ATLAS CLOUD DATABASE CONNECTION ---
 const MONGODB_URI = process.env.MONGODB_URI;
 
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => {
+mongoose.connect(MONGODB_URI).then(() => {
   console.log("Connected to MongoDB Atlas Cloud Database Successfully!");
 }).catch(err => {
   console.error("MongoDB Connection Error:", err);
