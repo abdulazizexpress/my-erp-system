@@ -858,17 +858,22 @@ function enforceRoleAccessPermissions() {
     el.style.display = perms.accountingAccess || isAdmin ? "flex" : "none";
   });
 
-  // স্টাফ ও পারমিশন শুধু অ্যাডমিন দেখতে পারবে[cite: 7]
+  // স্টাফ ও পারমিশন শুধু অ্যাডমিন দেখতে পারবে
   document.querySelectorAll("[data-perm='users']").forEach(el => {
     el.style.display = isAdmin ? "flex" : "none";
   });
 
-  // পাইকারি (Wholesale) শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে পারবে[cite: 7]
+  // পাইকারি (Wholesale) শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে পারবে
   document.querySelectorAll("[data-perm='wholesale']").forEach(el => {
     el.style.display = isAdmin ? "flex" : "none";
   });
 
-  // প্রোডাক্টের মোট স্টক ভ্যালু ও পাইকারি ক্রয়মূল্য শুধু অ্যাডমিন দেখবে[cite: 7]
+  // রিপোর্টস (Reports) শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে পারবে
+  document.querySelectorAll("[data-perm='reports']").forEach(el => {
+    el.style.display = isAdmin ? "flex" : "none";
+  });
+
+  // প্রোডাক্টের মোট স্টক ভ্যালু ও পাইকারি ক্রয়মূল্য শুধু অ্যাডমিন দেখবে
   document.querySelectorAll(".admin-only-financial").forEach(el => {
     el.style.display = isAdmin ? "" : "none";
   });
@@ -1935,7 +1940,7 @@ function renderProducts() {
       </tr>`;
   }).join("");
 
-  // টেবিল হেডার হাইড/শো হ্যান্ডলিং[cite: 7]
+  // টেবিল হেডার হাইড/শো হ্যান্ডলিং
   document.querySelectorAll(".admin-only-financial").forEach(el => {
     el.style.display = isAdmin ? "" : "none";
   });
