@@ -224,7 +224,6 @@ function getPeriodFilteredData(period, isReports = false) {
       expList = DB.expenses.filter(e => e.date >= start && e.date <= end);
     }
   } else if (period === "all") {
-    // শুরু থেকে আজ পর্যন্ত সব অর্ডারের হিসাব
     ordList = DB.orders;
     expList = DB.expenses;
   }
@@ -911,7 +910,7 @@ function logoutUser() {
 }
 
 /* =======================================================================
-   STRICT ROLE ACCESS CONTROL & FINANCIAL PRIVACY
+   STRICT ROLE ACCESS CONTROL (ADMIN ONLY FOR SETTINGS)
 ======================================================================= */
 function enforceRoleAccessPermissions() {
   const user = getActiveUser();
@@ -934,12 +933,17 @@ function enforceRoleAccessPermissions() {
     el.style.display = isAdmin ? "flex" : "none";
   });
 
-  // রিপোর্টস (Reports) শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে পারবে
+  // রিপোর্টস শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে পারবে
   document.querySelectorAll("[data-perm='reports']").forEach(el => {
     el.style.display = isAdmin ? "flex" : "none";
   });
 
-  // প্রোডাক্টের মোট স্টক ভ্যালু ও পাইকারি ক্রয়মূল্য শুধু অ্যাডমিন দেখবে
+  // সেটিংস ও ব্যাকআপ শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে এবং পরিবর্তন করতে পারবে
+  document.querySelectorAll("[data-perm='settings']").forEach(el => {
+    el.style.display = isAdmin ? "flex" : "none";
+  });
+
+  // প্রোডাক্টের মোট স্টক ভ্যালু ও পাইকারি ক্রয়মূল্য শুধু অ্যাডমিন দেখবে
   document.querySelectorAll(".admin-only-financial").forEach(el => {
     el.style.display = isAdmin ? "" : "none";
   });
@@ -1217,23 +1221,64 @@ function autoCalculateShippingCharge() {
   document.getElementById("f-order-delivery").value = base + extraWeightCharge;
 }
 
+/* =======================================================================
+   BULLETPROOF SETTINGS PERSISTENCE & SYNC
+======================================================================= */
 function saveShippingRules() {
+  const currentUser = getActiveUser();
+  const isAdmin = currentUser && (currentUser.role === "Admin" || currentUser.name === "Super Admin");
+  if (!isAdmin) {
+    toast("⚠️ শুধুমাত্র অ্যাডমিন সেটিংস পরিবর্তন করতে পারবে!");
+    return;
+  }
+
+  DB.settings = DB.settings || {};
   DB.settings.shippingRules = {
     insideDhaka: Number(document.getElementById("rule-dhaka").value) || 80,
     outsideDhaka: Number(document.getElementById("rule-outside").value) || 130,
     perKgCharge: Number(document.getElementById("rule-weight").value) || 20
   };
+
   DB.settings.courierApiKeys = {
-    steadfast: document.getElementById("set-steadfast-key").value.trim(),
-    pathao: document.getElementById("set-pathao-key").value.trim()
+    steadfast: (document.getElementById("set-steadfast-key").value || "").trim(),
+    pathao: (document.getElementById("set-pathao-key").value || "").trim()
   };
+
   DB.settings.fraudCheckerApi = {
-    apiKey: document.getElementById("set-fraud-api-key").value.trim(),
-    apiUrl: document.getElementById("set-fraud-api-url").value.trim()
+    apiKey: (document.getElementById("set-fraud-api-key").value || "").trim(),
+    apiUrl: (document.getElementById("set-fraud-api-url").value || "").trim()
   };
+
   saveDB();
-  logActivity("Settings", "Updated Shipping, Courier & Fraud API Settings");
-  toast("শিপিং চার্জ ও API সেটিংস সংরক্ষিত হয়েছে");
+  logActivity("Settings", "Updated Shipping Rules & Courier API Keys");
+  toast("শিপিং চার্জ ও API সেটিংস স্থায়ীভাবে সংরক্ষিত হয়েছে");
+}
+
+function renderSettings() {
+  DB.settings = DB.settings || {};
+  
+  document.getElementById("set-branding-name").value = DB.settings.appName || "Noorish ERP";
+  document.getElementById("set-branding-sub").value = DB.settings.appSub || "Enterprise Business Suite";
+  document.getElementById("set-shopname").value = DB.settings.shopName || "Noorish Enterprise";
+  document.getElementById("set-phone").value = DB.settings.phone || "";
+  document.getElementById("set-address").value = DB.settings.address || "";
+  document.getElementById("set-currency").value = DB.settings.currency || "৳";
+
+  // Shipping Rules Persistence
+  const rules = DB.settings.shippingRules || { insideDhaka: 80, outsideDhaka: 130, perKgCharge: 20 };
+  document.getElementById("rule-dhaka").value = rules.insideDhaka;
+  document.getElementById("rule-outside").value = rules.outsideDhaka;
+  document.getElementById("rule-weight").value = rules.perKgCharge;
+
+  // Courier API Keys Persistence
+  const api = DB.settings.courierApiKeys || {};
+  document.getElementById("set-steadfast-key").value = api.steadfast || "";
+  document.getElementById("set-pathao-key").value = api.pathao || "";
+
+  // Fraud API Persistence
+  const fraudApi = DB.settings.fraudCheckerApi || {};
+  document.getElementById("set-fraud-api-key").value = fraudApi.apiKey || "";
+  document.getElementById("set-fraud-api-url").value = fraudApi.apiUrl || "https://api.bdcourier.com/courier-check";
 }
 
 function renderCourierManagement() {
@@ -2740,7 +2785,7 @@ function renderReports() {
   const breakdownTbody = document.getElementById("rep-detailed-breakdown");
   if (breakdownTbody) {
     breakdownTbody.innerHTML = `
-      <tr><td><b>Revenue (মোট বিক্রয়)</b></td><td class="num pos">+${money(revenue)}</td><td class="num">100%</td></tr>
+      <tr><td><b>Revenue (মোট বিক্রয়ী)</b></td><td class="num pos">+${money(revenue)}</td><td class="num">100%</td></tr>
       <tr><td><b>Product Cost (FIFO COGS)</b></td><td class="num neg">-${money(cogs)}</td><td class="num">${pCogs}%</td></tr>
       <tr><td><b>লজিস্টিক ও অন্যান্য খরচ</b></td><td class="num neg">-${money(totalExp)}</td><td class="num">${pExp}%</td></tr>
       <tr style="font-weight:800; background:var(--surface-2)"><td>নিট মুনাফা (NET PROFIT)</td><td class="num ${netProfit >= 0 ? 'pos' : 'neg'}">${money(netProfit)}</td><td class="num">${marginPct}%</td></tr>
@@ -2917,62 +2962,88 @@ function renderCustomers() {
 }
 
 /* =======================================================================
-   SETTINGS & BACKUP CONTROLLER
+   SECURE BACKEND & DATA MANAGEMENT (PASSWORD: 01814492196)
 ======================================================================= */
-function renderSettings() {
-  document.getElementById("set-branding-name").value = DB.settings.appName || "SKM Flow";
-  document.getElementById("set-branding-sub").value = DB.settings.appSub || "Enterprise Business Suite";
-  document.getElementById("set-shopname").value = DB.settings.shopName;
-  document.getElementById("set-phone").value = DB.settings.phone;
-  document.getElementById("set-address").value = DB.settings.address;
-  document.getElementById("set-currency").value = DB.settings.currency;
 
-  const rules = DB.settings.shippingRules || { insideDhaka: 80, outsideDhaka: 130, perKgCharge: 20 };
-  document.getElementById("rule-dhaka").value = rules.insideDhaka;
-  document.getElementById("rule-outside").value = rules.outsideDhaka;
-  document.getElementById("rule-weight").value = rules.perKgCharge;
-
-  const api = DB.settings.courierApiKeys || {};
-  document.getElementById("set-steadfast-key").value = api.steadfast || "";
-  document.getElementById("set-pathao-key").value = api.pathao || "";
-
-  const fraudApi = DB.settings.fraudCheckerApi || {};
-  document.getElementById("set-fraud-api-key").value = fraudApi.apiKey || "rlPhB2yDqwi1EOJQ4z42GwdfAVyEBTXqt65lUFz1nYjAdWAQr5n80YwwBCT4";
-  document.getElementById("set-fraud-api-url").value = fraudApi.apiUrl || "https://api.bdcourier.com/courier-check";
-}
-
+// ১. Export JSON Security
 document.getElementById("btn-export").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(DB, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `skm-backup-${todayStr()}.json`;
-  a.click();
-  logActivity("Backup", "Exported system JSON backup");
+  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nব্যাকআপ ফাইল (Export JSON) ডাউনলোড করতে পাসওয়ার্ড দিন:");
+  if (enteredPass === null) return;
+
+  if (enteredPass === "01814492196") {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
+    const dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href", dataStr);
+    dlAnchorElem.setAttribute("download", `noorish_erp_backup_${todayStr()}.json`);
+    document.body.appendChild(dlAnchorElem);
+    dlAnchorElem.click();
+    dlAnchorElem.remove();
+    toast("সফলভাবে ব্যাকআপ ফাইল ডাউনলোড হয়েছে[cite: 14]");
+  } else {
+    alert("❌ ভুল পাসওয়ার্ড! ব্যাকআপ ডাউনলোড বাতিল করা হয়েছে।");
+  }
 });
 
-document.getElementById("btn-import-trigger").addEventListener("click", () => document.getElementById("file-import").click());
+// ২. Restore JSON Security
+document.getElementById("btn-import-trigger").addEventListener("click", () => {
+  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nসিস্টেম রিস্টোর (Restore JSON) করতে পাসওয়ার্ড দিন:");
+  if (enteredPass === null) return;
+
+  if (enteredPass === "01814492196") {
+    const input = document.getElementById('file-import');
+    if (input) input.click();
+  } else {
+    alert("❌ ভুল পাসওয়ার্ড! রিস্টোর প্রক্রিয়া বাতিল করা হয়েছে।");
+  }
+});
 
 document.getElementById("file-import").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (ev) => {
+  reader.onload = event => {
     try {
-      DB = JSON.parse(ev.target.result);
-      saveDB(); applyTheme(); applyBranding(); renderAll();
-      logActivity("Backup", "Restored system database from JSON backup");
-      toast("Backup Imported Successfully");
-    } catch (err) { toast("Invalid JSON file"); }
+      const parsed = JSON.parse(event.target.result);
+      if (parsed && parsed.orders && parsed.products) {
+        DB = parsed;
+        saveDB();
+        applyTheme();
+        applyBranding();
+        renderAll();
+        toast("সফলভাবে সিস্টেম ডেটা রিস্টোর করা হয়েছে[cite: 14]");
+      } else {
+        alert("❌ ফাইল ফরম্যাট সঠিক নয়!");
+      }
+    } catch (err) {
+      alert("❌ ব্যাকআপ ফাইলটি রিড করা সম্ভব হয়নি!");
+    }
   };
   reader.readAsText(file);
 });
 
+// ৩. Reset All System Data Security
 document.getElementById("btn-reset-all").addEventListener("click", () => {
-  if (confirm("Reset all data? This cannot be undone.")) {
-    localStorage.removeItem(DB_KEY);
-    DB = defaultDB(); applyTheme(); applyBranding(); renderAll();
-    saveDB();
-    toast("All data reset");
+  const currentUser = getActiveUser();
+  if (!currentUser || (currentUser.role !== "Admin" && currentUser.name !== "Super Admin")) {
+    toast("⚠️ শুধুমাত্র সুপার এডমিন সিস্টেম রিসেট করতে পারবেন!");
+    return;
+  }
+
+  const enteredPass = prompt("⚠️ চরম সতর্কবার্তা!\nসব ডেটা চিরতরে মুছে ফেলতে পাসওয়ার্ড (01814492196) লিখুন:");
+  if (enteredPass === null) return;
+
+  if (enteredPass === "01814492196") {
+    if (confirm("শেষবারের মতো নিশ্চিত করুন: আপনি কি সত্যিই সমস্ত ডাটা রিসেট করতে চান?")) {
+      localStorage.removeItem(DB_KEY);
+      DB = defaultDB(); 
+      applyTheme(); 
+      applyBranding(); 
+      renderAll();
+      saveDB();
+      toast("সিস্টেমের সমস্ত ডেটা সফলভাবে রিসেট করা হয়েছে[cite: 14]");
+    }
+  } else {
+    alert("❌ ভুল পাসওয়ার্ড! সিস্টেম রিসেট বাতিল করা হয়েছে।");
   }
 });
 
