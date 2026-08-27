@@ -140,18 +140,27 @@ async function saveDB() {
   } catch (err) {}
 }
 
+/* =======================================================================
+   SECURE BACKEND SYNC (PREVENTS DATA OVERWRITE)
+======================================================================= */
 async function syncFromBackend() {
   try {
     const res = await fetch(BACKEND_API_ENDPOINT);
     if (res.ok) {
       const serverData = await res.json();
-      if (serverData && serverData.settings) {
+      // সার্ভারে যদি আসলেই কোনো সেভ করা প্রোডাক্ট থাকে তবেই কেবল সিঙ্ক করবে
+      if (serverData && serverData.products && serverData.products.length > 0) {
         DB = serverData;
         localStorage.setItem(DB_KEY, JSON.stringify(DB));
         renderAll();
+      } else {
+        // সার্ভার খালি থাকলে লোকাল ডেটা সার্ভারে পাঠিয়ে সেভ করে নিবে
+        saveDB();
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Backend sync failed, using local database:", e);
+  }
 }
 
 function nextInvoice() { return "INV-" + (DB.seq++); }
@@ -165,7 +174,7 @@ function money(n) {
 function toast(msg) {
   const wrap = document.getElementById("toast-wrap");
   if (!wrap) return;
-  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  const t = document.createElement("div"); t.textContent = msg;
   wrap.appendChild(t); setTimeout(() => t.remove(), 2500);
 }
 
