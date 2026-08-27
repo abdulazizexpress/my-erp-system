@@ -150,6 +150,7 @@
         <div class="date-filter-group">
           <div class="period-switch" id="dash-period">
             <button data-p="today">Today</button>
+            <button data-p="yesterday">Yesterday</button>
             <button data-p="7days">7 Days</button>
             <button data-p="30days" class="active">30 Days</button>
             <button data-p="custom">Custom</button>
@@ -674,16 +675,17 @@
         <div class="report-filter-wrapper">
           <div class="period-pills" id="rep-period-pills">
             <button class="pill-btn" data-p="today">Today</button>
+            <button class="pill-btn" data-p="yesterday">Yesterday</button>
             <button class="pill-btn" data-p="7days">7 Days</button>
             <button class="pill-btn active" data-p="30days">30 Days</button>
             <button class="pill-btn" data-p="custom">Custom</button>
             <button class="pill-btn" data-p="all">All Time</button>
           </div>
-          <div id="rep-custom-date-box" class="rep-custom-date-picker" style="display: none;">
+          <div id="rep-custom-date-box" class="rep-custom-date-picker" style="display: none; align-items:center; gap:6px; margin-top:6px;">
             <input type="date" id="rep-start-date" class="date-inp">
-            <span class="date-sep">to</span>
+            <span class="date-sep" style="font-size:11px; color:var(--ink-soft);">to</span>
             <input type="date" id="rep-end-date" class="date-inp">
-            <button class="btn sm" onclick="renderReports()"><i class="fa-solid fa-check"></i></button>
+            <button class="btn sm" onclick="renderReports()"><i class="fa-solid fa-check"></i> Apply</button>
           </div>
         </div>
       </div>
