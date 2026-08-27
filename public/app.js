@@ -1814,7 +1814,6 @@ function handleProductImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  // 2MB বা বড় ছবিকে অটোমেটিক কম্প্রেস করে মাত্র ৩০-৪০ KB করা
   const reader = new FileReader();
   reader.onload = function(e) {
     const img = new Image();
@@ -1822,27 +1821,34 @@ function handleProductImageUpload(event) {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       
-      const maxDim = 200; // থাম্বনেইলের জন্য সর্বোচ্চ সাইজ
+      // HD শার্প রেজোলিউশনের জন্য সর্বোচ্চ সাইজ ৮০০ পিক্সেল
+      const maxDim = 800; 
       let width = img.width;
       let height = img.height;
 
       if (width > height) {
         if (width > maxDim) {
-          height *= maxDim / width;
+          height = Math.round((height * maxDim) / width);
           width = maxDim;
         }
       } else {
         if (height > maxDim) {
-          width *= maxDim / height;
+          width = Math.round((width * maxDim) / height);
           height = maxDim;
         }
       }
 
       canvas.width = width;
       canvas.height = height;
+
+      // ক্রিস্টাল ক্লিয়ার ইমেজ রেন্ডারিং সেটিংস
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, 0, 0, width, height);
 
-      currentProductImageBase64 = canvas.toDataURL("image/jpeg", 0.7);
+      // ৮৫% হাই-কোয়ালিটি শার্পনেস
+      currentProductImageBase64 = canvas.toDataURL("image/jpeg", 0.85);
+      
       document.getElementById("prod-image-preview-box").innerHTML = `
         <img src="${currentProductImageBase64}" style="width:48px;height:48px;border-radius:6px;object-fit:cover;border:1px solid var(--line);">
       `;
