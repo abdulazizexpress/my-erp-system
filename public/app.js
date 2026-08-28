@@ -97,7 +97,7 @@ function defaultDB() {
       }
     ],
     wholesale: [
-      { id: 501, invoice: "WS-5001", date: todayStr(), clientName: "Chawkbazar Wholesaler", phone: "01811111111", address: "Dhaka", courier: "Sundarban", tracking: "SB-8910", courierCost: 200, packagingCost: 50, items: [{ productId: 1, name: "COSRX Snail 96 Mucin", qty: 10, price: 1350, cost: 1120 }], bill: 13500, paid: 10000, due: 3500, totalCost: 11450, profit: 2050, status: "pending" }
+      { id: 501, invoice: "WS-5001", date: todayStr(), clientName: "Chawkbazar Wholesaler", phone: "01811111111", address: "Dhaka", courier: "Sundarban", tracking: "SB-8910", courierCost: 200, packagingCost: 50, items: [{ productId: 1, name: "COSRX Snail 96 Mucin", qty: 10, price: 1350, cost: 1120 }], bill: 13500, paid: 10000, due: 3500, totalCost: 11450, profit: 2050, status: "pending", stockDeducted: true }
     ],
     activityLogs: [
       { id: 1, timestamp: "2026-08-24 10:00 AM", user: "Admin", category: "System", description: "SKM Flow Suite Ready" }
@@ -131,9 +131,9 @@ let editingWholesaleId = null;
 let orderStatusFilter = "all";
 let wholesaleStatusFilter = "all";
 let orderSearchTerm = "";
-let reportPeriod = "30days";
+let reportPeriod = "today"; // রিকোয়ারমেন্ট ৪: রিপোর্টের ডিফল্ট 'Today'
 let currentReportTab = "profit-report";
-let dashPeriod = "30days";
+let dashPeriod = "today"; // রিকোয়ারমেন্ট ৪: ড্যাশবোর্ডের ডিফল্ট 'Today'
 
 async function saveDB() {
   localStorage.setItem(DB_KEY, JSON.stringify(DB));
@@ -146,9 +146,6 @@ async function saveDB() {
   } catch (err) {}
 }
 
-/* =======================================================================
-   SECURE BACKEND SYNC (PREVENTS DATA OVERWRITE)
-======================================================================= */
 async function syncFromBackend() {
   try {
     const res = await fetch(BACKEND_API_ENDPOINT);
@@ -187,9 +184,6 @@ function statusBadge(s) {
   return `<span class="badge b-${s}">${map[s] || s}</span>`;
 }
 
-/* =======================================================================
-   ACCURATE DATE PERIOD FILTER (TODAY, YESTERDAY, 7D, 30D, CUSTOM, ALL)
-======================================================================= */
 function getPeriodFilteredData(period, isReports = false) {
   const today = todayStr();
   const yest = yesterdayStr();
@@ -215,10 +209,8 @@ function getPeriodFilteredData(period, isReports = false) {
   } else if (period === "custom") {
     const startInp = isReports ? document.getElementById("rep-start-date") : document.getElementById("dash-start-date");
     const endInp = isReports ? document.getElementById("rep-end-date") : document.getElementById("dash-end-date");
-    
     const start = startInp ? startInp.value : "";
     const end = endInp ? endInp.value : "";
-
     if (start && end) {
       ordList = DB.orders.filter(o => o.date >= start && o.date <= end);
       expList = DB.expenses.filter(e => e.date >= start && e.date <= end);
@@ -230,9 +222,6 @@ function getPeriodFilteredData(period, isReports = false) {
   return { orders: ordList, expenses: expList };
 }
 
-/* =======================================================================
-   IMAGE LIGHTBOX / MODAL PREVIEW
-======================================================================= */
 function openImagePreview(imgSrc, title) {
   if (!imgSrc) return;
   document.getElementById("preview-modal-img").src = imgSrc;
@@ -246,284 +235,34 @@ function closeImagePreview() {
 }
 
 /* =======================================================================
-   UNIVERSAL BD COURIER DATA PARSER & FRAUD ENGINE
+   REQUISITION 1: ORDER & WHOLESALE PREVIEW MODAL FUNCTIONALITY
 ======================================================================= */
-async function fetchLiveFraudDataFromAPI(phone) {
-  const cleanPhone = phone.trim().replace(/[^0-9]/g, "");
-  const hardcodedKey = "rlPhB2yDqwi1EOJQ4z42GwdfAVyEBTXqt65lUFz1nYjAdWAQr5n80YwwBCT4";
-  const savedKey = (DB.settings && DB.settings.fraudCheckerApi && DB.settings.fraudCheckerApi.apiKey)
-    ? DB.settings.fraudCheckerApi.apiKey.trim()
-    : hardcodedKey;
+function openOrderPreview(orderId, isWholesale = false) {
+  const item = isWholesale ? DB.wholesale.find(x => x.id === orderId) : DB.orders.find(x => x.id === orderId);
+  if (!item) return;
 
-  try {
-    const response = await fetch("/api/check-fraud-proxy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: cleanPhone, apiKey: savedKey })
-    });
+  const titleEl = document.getElementById("preview-modal-invoice-title");
+  const contentEl = document.getElementById("order-preview-content");
 
-    if (response.ok) {
-      const resJson = await response.json();
-      const root = resJson.data || resJson.result || resJson;
+  titleEl.textContent = `Preview: ${item.invoice} (${isWholesale ? item.clientName : item.name})`;
 
-      const couriersList = [
-        { name: "Pathao", keys: ["pathao"] },
-        { name: "SteadFast", keys: ["steadfast", "stead_fast"] },
-        { name: "Courier Fast", keys: ["courierfast", "courier_fast"] },
-        { name: "REDX", keys: ["redx"] },
-        { name: "PaperFly", keys: ["paperfly", "paper_fly"] },
-        { name: "CarryBee", keys: ["carrybee", "carry_bee"] }
-      ];
+  let itemsHtml = item.items ? item.items.map(i => `<li><b>${i.name}</b> — Qty: ${i.qty} | Rate: ${money(i.price || i.rate || 0)}</li>`).join("") : "<li>কোনো পণ্য নেই</li>";
 
-      let tableRows = [];
-      let totalOrders = 0;
-      let totalSuccess = 0;
-      let totalCancel = 0;
-
-      couriersList.forEach(item => {
-        let found = null;
-        for (let k of item.keys) {
-          if (root[k] !== undefined) { found = root[k]; break; }
-        }
-
-        if (!found && Array.isArray(root)) {
-          found = root.find(x => item.keys.some(k => (x.name || x.courier || "").toLowerCase().includes(k)));
-        }
-
-        let t = 0, s = 0, c = 0;
-        if (found && typeof found === "object") {
-          t = Number(found.total_parcels || found.total_orders || found.total || found.total_parcel || 0);
-          s = Number(found.success_parcels || found.delivered_parcels || found.delivered || found.success || found.success_parcel || 0);
-          c = Number(found.cancelled_parcels || found.returned_parcels || found.cancelled || found.cancel || found.cancel_parcel || 0);
-        }
-
-        totalOrders += t;
-        totalSuccess += s;
-        totalCancel += c;
-
-        tableRows.push({ name: item.name, total: t, success: s, cancel: c });
-      });
-
-      const rawTotal = root.total_parcels || root.total_orders || root.total || resJson.total_parcels || resJson.total;
-      const rawSuccess = root.success_parcels || root.delivered_parcels || root.delivered || root.success || resJson.success_parcels || resJson.success;
-      const rawCancel = root.cancelled_parcels || root.returned_parcels || root.cancelled || root.cancel || resJson.cancelled_parcels || resJson.cancel;
-
-      if (rawTotal !== undefined) totalOrders = Number(rawTotal);
-      if (rawSuccess !== undefined) totalSuccess = Number(rawSuccess);
-      if (rawCancel !== undefined) totalCancel = Number(rawCancel);
-
-      return {
-        total: totalOrders,
-        success: totalSuccess,
-        cancel: totalCancel,
-        couriers: tableRows,
-        source: "Live BD Courier API",
-        isSuccess: true
-      };
-    }
-  } catch (e) {
-    console.error("API Error:", e);
-  }
-
-  return {
-    total: 0, success: 0, cancel: 0,
-    couriers: [
-      { name: "Pathao", total: 0, success: 0, cancel: 0 },
-      { name: "SteadFast", total: 0, success: 0, cancel: 0 },
-      { name: "Courier Fast", total: 0, success: 0, cancel: 0 },
-      { name: "REDX", total: 0, success: 0, cancel: 0 },
-      { name: "PaperFly", total: 0, success: 0, cancel: 0 },
-      { name: "CarryBee", total: 0, success: 0, cancel: 0 }
-    ],
-    source: "Connection Error / No Data",
-    isSuccess: false
-  };
-}
-
-/* =======================================================================
-   BULLETPROOF PHONE NUMBER FORMATTER & VALIDATOR
-======================================================================= */
-function formatAndValidateFraudPhone(input) {
-  let val = input.value || "";
-  const bnToEn = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
-  val = val.replace(/[০-৯]/g, match => bnToEn[match]);
-
-  let digits = val.replace(/[^0-9]/g, '');
-
-  if (digits.startsWith("8801")) {
-    digits = digits.slice(2);
-  } else if (digits.startsWith("008801")) {
-    digits = digits.slice(4);
-  }
-
-  if (digits.length > 11) {
-    digits = digits.slice(0, 11);
-  }
-
-  input.value = digits;
-
-  const errBox = document.getElementById("fraud-phone-error");
-  if (errBox) {
-    if (digits.length > 0 && digits.length < 11) {
-      errBox.style.display = "block";
-      input.style.borderColor = "#dc2626";
-    } else {
-      errBox.style.display = "none";
-      input.style.borderColor = "";
-    }
-  }
-}
-
-async function runManualFraudCheck() {
-  const phoneInput = document.getElementById("fraud-search-phone");
-  const phone = phoneInput.value.trim();
-  const errBox = document.getElementById("fraud-phone-error");
-
-  if (!phone || phone.length !== 11) {
-    if (errBox) errBox.style.display = "block";
-    phoneInput.style.borderColor = "#dc2626";
-    toast("অনুগ্রহ করে সম্পূর্ণ ১১ ডিজিটের মোবাইল নম্বর দিন");
-    return;
-  }
-  if (errBox) errBox.style.display = "none";
-  phoneInput.style.borderColor = "";
-
-  const resContainer = document.getElementById("fraud-result-container");
-  resContainer.style.display = "block";
-  resContainer.innerHTML = `<div class="card" style="text-align:center; padding:24px;"><i class="fa-solid fa-spinner fa-spin text-purple" style="font-size:24px;"></i><p style="margin-top:8px;">BD Courier ডাটাবেজ থেকে লাইভ তথ্য লোড হচ্ছে...</p></div>`;
-
-  const isBlacklisted = DB.blacklist.some(b => b.phone.trim() === phone);
-  const data = await fetchLiveFraudDataFromAPI(phone);
-
-  const total = data.total;
-  const successRate = total > 0 ? ((data.success / total) * 100).toFixed(1) : "100.0";
-  const cancelRate = total > 0 ? ((data.cancel / total) * 100).toFixed(1) : "0.0";
-
-  let statusTitle = "Safe";
-  let statusSubtitle = `Strong delivery success rate (${successRate}%)`;
-  let alertBg = "#dcfce7";
-  let alertColor = "#16a34a";
-
-  if (isBlacklisted) {
-    statusTitle = "High Risk (Blacklisted)";
-    statusSubtitle = "এই নম্বরটি ফ্রড ব্ল্যাকলিস্টে রয়েছে!";
-    alertBg = "#fee2e2";
-    alertColor = "#dc2626";
-  } else if (total > 0 && Number(cancelRate) >= 40) {
-    statusTitle = "High Risk";
-    statusSubtitle = `High return rate detected (${cancelRate}%)`;
-    alertBg = "#fee2e2";
-    alertColor = "#dc2626";
-  } else if (total > 0 && Number(cancelRate) > 15) {
-    statusTitle = "Moderate Risk";
-    statusSubtitle = `Moderate cancel rate (${cancelRate}%)`;
-    alertBg = "#fef3c7";
-    alertColor = "#d97706";
-  }
-
-  resContainer.innerHTML = `
-    <div style="background:${alertBg}; color:${alertColor}; border:1px solid ${alertColor}; padding:12px 16px; border-radius:10px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <div style="font-size:16px; font-weight:800;"><i class="fa-solid fa-shield-halved"></i> ${statusTitle}</div>
-        <div style="font-size:12px; margin-top:2px;">• ${statusSubtitle}</div>
-      </div>
-      <span class="badge ${data.isSuccess ? 'b-delivered' : 'b-pending'}" style="font-size:11px;">${data.source}</span>
-    </div>
-
-    <div class="grid g-4" style="margin-bottom:16px;">
-      <div class="card" style="text-align:center; padding:14px;">
-        <div class="label muted" style="font-size:11.5px; font-weight:700;">Total Orders</div>
-        <div class="value" style="font-size:26px; font-weight:900; color:var(--blue); margin-top:4px;">${total}</div>
-        <div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">All time</div>
-      </div>
-      <div class="card" style="text-align:center; padding:14px;">
-        <div class="label muted" style="font-size:11.5px; font-weight:700;">Successful</div>
-        <div class="value" style="font-size:26px; font-weight:900; color:var(--green); margin-top:4px;">${data.success}</div>
-        <div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">Delivered</div>
-      </div>
-      <div class="card" style="text-align:center; padding:14px;">
-        <div class="label muted" style="font-size:11.5px; font-weight:700;">Cancelled</div>
-        <div class="value" style="font-size:26px; font-weight:900; color:var(--red); margin-top:4px;">${data.cancel}</div>
-        <div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">Failed / Returned</div>
-      </div>
-      <div class="card" style="text-align:center; padding:14px;">
-        <div class="label muted" style="font-size:11.5px; font-weight:700;">Success Rate</div>
-        <div class="value" style="font-size:26px; font-weight:900; color:var(--purple); margin-top:4px;">${successRate}%</div>
-        <div class="rev-progress-track" style="height:6px; margin-top:6px;">
-          <div class="rev-fill bg-emerald-500" style="width:${successRate}%;"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" style="padding:0; overflow:hidden; margin-bottom:14px;">
-      <table style="width:100%; border-collapse:collapse;">
-        <thead>
-          <tr style="background:var(--surface-2);">
-            <th style="padding:10px 14px;">COURIER</th>
-            <th class="num" style="padding:10px 14px;">TOTAL</th>
-            <th class="num text-emerald-600" style="padding:10px 14px;">SUCCESS</th>
-            <th class="num text-rose-600" style="padding:10px 14px;">CANCEL</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.couriers.map(c => `
-            <tr>
-              <td style="padding:10px 14px; font-weight:700;">${c.name}</td>
-              <td class="num mono" style="padding:10px 14px; font-weight:800;">${c.total}</td>
-              <td class="num mono text-emerald-600" style="padding:10px 14px; font-weight:800;">${c.success}</td>
-              <td class="num mono text-rose-600" style="padding:10px 14px; font-weight:800;">${c.cancel}</td>
-            </tr>
-          `).join("")}
-          <tr style="background:var(--surface-2); font-weight:900;">
-            <td style="padding:10px 14px;">Total</td>
-            <td class="num mono" style="padding:10px 14px;">${total}</td>
-            <td class="num mono text-emerald-600" style="padding:10px 14px;">${data.success}</td>
-            <td class="num mono text-rose-600" style="padding:10px 14px;">${data.cancel}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div style="display:flex; gap:8px;">
-      <button class="btn danger sm" onclick="quickAddToBlacklist('${phone}')"><i class="fa-solid fa-ban"></i> ব্ল্যাকলিস্টে যুক্ত করুন</button>
-      <button class="btn ghost sm" onclick="openNewOrderWithPhone('${phone}')"><i class="fa-solid fa-cart-plus"></i> এই নম্বরে অর্ডার তৈরি করুন</button>
-    </div>
+  contentEl.innerHTML = `
+    <p><b>তারিখ:</b> ${item.date}</p>
+    <p><b>গ্রাহক নাম:</b> ${isWholesale ? item.clientName : item.name}</p>
+    <p><b>ফোন:</b> ${item.phone}</p>
+    <p><b>ঠিকানা:</b> ${item.address || "প্রযোজ্য নয়"}</p>
+    <p><b>কুরিয়ার:</b> ${item.courier} (Tracking: ${item.tracking || 'N/A'})</p>
+    <hr style="border:0; border-top:1px solid var(--line); margin: 8px 0;">
+    <p><b>অর্ডারকৃত পণ্যসমূহ (প্যাকেজিং টিমের জন্য):</b></p>
+    <ul style="padding-left: 18px; margin: 4px 0;">${itemsHtml}</ul>
+    <hr style="border:0; border-top:1px solid var(--line); margin: 8px 0;">
+    <p><b>সর্বমোট বিল:</b> ${money(isWholesale ? item.bill : item.grandTotal)}</p>
+    <p><b>স্ট্যাটাস:</b> <span class="badge b-${item.status}">${item.status}</span></p>
   `;
-}
 
-function quickAddToBlacklist(phone) {
-  if (DB.blacklist.some(b => b.phone === phone)) { toast("নম্বরটি আগেই ব্ল্যাকলিস্ট করা আছে"); return; }
-  DB.blacklist.push({ id: Date.now(), phone, reason: "Fraud Checker Flagged", date: todayStr() });
-  saveDB();
-  toast("নম্বর সফলভাবে ব্ল্যাকলিস্ট করা হয়েছে");
-  runManualFraudCheck();
-}
-
-function openNewOrderWithPhone(phone) {
-  openNewOrderModal();
-  document.getElementById("f-order-phone").value = phone;
-  evaluateCustomerRisk(phone);
-}
-
-async function checkOrderPhoneFraudAPI() {
-  const phone = document.getElementById("f-order-phone").value.trim();
-  if (!phone || phone.length < 11) { toast("সঠিক ফোন নম্বর দিন"); return; }
-  toast("Live API দিয়ে ফ্রড চেক হচ্ছে...");
-  const data = await fetchLiveFraudDataFromAPI(phone);
-  const total = data.total;
-  const returnRate = total > 0 ? ((data.cancel / total) * 100).toFixed(0) : 0;
-  
-  const alertBox = document.getElementById("customer-risk-indicator");
-  alertBox.style.display = "block";
-  if (returnRate >= 40) {
-    alertBox.style.background = "var(--red-soft)";
-    alertBox.style.color = "var(--red)";
-    alertBox.innerHTML = `🔴 Live API Alert: উচ্চ রিটার্ন রেট ${returnRate}% (${data.cancel}/${total} পার্সেল)`;
-  } else {
-    alertBox.style.background = "var(--green-soft)";
-    alertBox.style.color = "var(--green)";
-    alertBox.innerHTML = `🟢 Live API: বিশ্বস্ত কাস্টমার (${data.success}/${total} সফল ডেলিভারি)`;
-  }
+  openModal("modal-order-preview");
 }
 
 /* =======================================================================
@@ -564,6 +303,53 @@ function restoreFIFOBatches(product, qty) {
   if (!product.batches || !product.batches.length) return;
   product.batches[0].qty += qty;
   product.stock = product.batches.reduce((s, b) => s + b.qty, 0);
+}
+
+/* =======================================================================
+   REQUISITION 2 & 3: INSTANT STOCK REDUCTION ON ORDER CREATION
+======================================================================= */
+function applyAutomaticDeductions(order) {
+  if (order.stockDeducted) return;
+
+  if (order.items && order.items.length) {
+    order.items.forEach(it => {
+      const prod = DB.products.find(p => p.id === it.productId || p.name.toLowerCase() === it.name.toLowerCase());
+      if (prod) {
+        deductFIFOBatches(prod, Number(it.qty));
+      }
+    });
+  }
+
+  const totalItemQty = order.items ? order.items.reduce((s, it) => s + Number(it.qty), 0) : 1;
+  if (order.packagingId) {
+    const pk = DB.packaging.find(p => p.id === order.packagingId);
+    if (pk) pk.stock = Math.max(0, pk.stock - totalItemQty);
+  }
+
+  order.stockDeducted = true;
+  saveDB();
+}
+
+function revertAutomaticDeductions(order) {
+  if (!order.stockDeducted) return;
+
+  if (order.items && order.items.length) {
+    order.items.forEach(it => {
+      const prod = DB.products.find(p => p.id === it.productId || p.name.toLowerCase() === it.name.toLowerCase());
+      if (prod) {
+        restoreFIFOBatches(prod, Number(it.qty));
+      }
+    });
+  }
+
+  const totalItemQty = order.items ? order.items.reduce((s, it) => s + Number(it.qty), 0) : 1;
+  if (order.packagingId) {
+    const pk = DB.packaging.find(p => p.id === order.packagingId);
+    if (pk) pk.stock += totalItemQty;
+  }
+
+  order.stockDeducted = false;
+  saveDB();
 }
 
 /* =======================================================================
@@ -918,32 +704,21 @@ function enforceRoleAccessPermissions() {
   const perms = user.permissions || {};
   const isAdmin = user.role === "Admin" || user.name === "Super Admin";
 
-  // একাউন্টিং শুধু অ্যাডমিন বা একাউন্টেন্ট দেখতে পারবে
   document.querySelectorAll("[data-perm='accounting']").forEach(el => {
     el.style.display = perms.accountingAccess || isAdmin ? "flex" : "none";
   });
-
-  // স্টাফ ও পারমিশন শুধু অ্যাডমিন দেখতে পারবে
   document.querySelectorAll("[data-perm='users']").forEach(el => {
     el.style.display = isAdmin ? "flex" : "none";
   });
-
-  // পাইকারি (Wholesale) শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে পারবে
   document.querySelectorAll("[data-perm='wholesale']").forEach(el => {
     el.style.display = isAdmin ? "flex" : "none";
   });
-
-  // রিপোর্টস শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে পারবে
   document.querySelectorAll("[data-perm='reports']").forEach(el => {
     el.style.display = isAdmin ? "flex" : "none";
   });
-
-  // সেটিংস ও ব্যাকআপ শুধু সুপার অ্যাডমিন ও অ্যাডমিন দেখতে এবং পরিবর্তন করতে পারবে
   document.querySelectorAll("[data-perm='settings']").forEach(el => {
     el.style.display = isAdmin ? "flex" : "none";
   });
-
-  // প্রোডাক্টের মোট স্টক ভ্যালু ও পাইকারি ক্রয়মূল্য শুধু অ্যাডমিন দেখবে
   document.querySelectorAll(".admin-only-financial").forEach(el => {
     el.style.display = isAdmin ? "" : "none";
   });
@@ -1221,9 +996,6 @@ function autoCalculateShippingCharge() {
   document.getElementById("f-order-delivery").value = base + extraWeightCharge;
 }
 
-/* =======================================================================
-   BULLETPROOF SETTINGS PERSISTENCE & SYNC
-======================================================================= */
 function saveShippingRules() {
   const currentUser = getActiveUser();
   const isAdmin = currentUser && (currentUser.role === "Admin" || currentUser.name === "Super Admin");
@@ -1264,18 +1036,15 @@ function renderSettings() {
   document.getElementById("set-address").value = DB.settings.address || "";
   document.getElementById("set-currency").value = DB.settings.currency || "৳";
 
-  // Shipping Rules Persistence
   const rules = DB.settings.shippingRules || { insideDhaka: 80, outsideDhaka: 130, perKgCharge: 20 };
   document.getElementById("rule-dhaka").value = rules.insideDhaka;
   document.getElementById("rule-outside").value = rules.outsideDhaka;
   document.getElementById("rule-weight").value = rules.perKgCharge;
 
-  // Courier API Keys Persistence
   const api = DB.settings.courierApiKeys || {};
   document.getElementById("set-steadfast-key").value = api.steadfast || "";
   document.getElementById("set-pathao-key").value = api.pathao || "";
 
-  // Fraud API Persistence
   const fraudApi = DB.settings.fraudCheckerApi || {};
   document.getElementById("set-fraud-api-key").value = fraudApi.apiKey || "";
   document.getElementById("set-fraud-api-url").value = fraudApi.apiUrl || "https://api.bdcourier.com/courier-check";
@@ -1354,53 +1123,6 @@ function renderCourierManagement() {
       </tr>
     `).join("") : `<tr><td colspan="8" class="tbl-empty">কোনো COD সেটেলমেন্ট নেই</td></tr>`;
   }
-}
-
-/* =======================================================================
-   AUTOMATIC STOCK & PACKAGING DEDUCTIONS
-======================================================================= */
-function applyAutomaticDeductions(order) {
-  if (order.stockDeducted) return;
-
-  if (order.items && order.items.length) {
-    order.items.forEach(it => {
-      const prod = DB.products.find(p => p.id === it.productId || p.name.toLowerCase() === it.name.toLowerCase());
-      if (prod) {
-        deductFIFOBatches(prod, Number(it.qty));
-      }
-    });
-  }
-
-  const totalItemQty = order.items ? order.items.reduce((s, it) => s + Number(it.qty), 0) : 1;
-  if (order.packagingId) {
-    const pk = DB.packaging.find(p => p.id === order.packagingId);
-    if (pk) pk.stock = Math.max(0, pk.stock - totalItemQty);
-  }
-
-  order.stockDeducted = true;
-  saveDB();
-}
-
-function revertAutomaticDeductions(order) {
-  if (!order.stockDeducted) return;
-
-  if (order.items && order.items.length) {
-    order.items.forEach(it => {
-      const prod = DB.products.find(p => p.id === it.productId || p.name.toLowerCase() === it.name.toLowerCase());
-      if (prod) {
-        restoreFIFOBatches(prod, Number(it.qty));
-      }
-    });
-  }
-
-  const totalItemQty = order.items ? order.items.reduce((s, it) => s + Number(it.qty), 0) : 1;
-  if (order.packagingId) {
-    const pk = DB.packaging.find(p => p.id === order.packagingId);
-    if (pk) pk.stock += totalItemQty;
-  }
-
-  order.stockDeducted = false;
-  saveDB();
 }
 
 /* =======================================================================
@@ -1570,7 +1292,7 @@ document.querySelectorAll("[data-close]").forEach(b => {
 });
 
 /* =======================================================================
-   DASHBOARD CONTROLLER
+   DASHBOARD CONTROLLER (REQ 4: DEFAULT 'TODAY')
 ======================================================================= */
 document.querySelectorAll("#dash-period button").forEach(b => {
   b.addEventListener("click", () => {
@@ -1645,7 +1367,7 @@ function renderDashboard() {
 }
 
 /* =======================================================================
-   WHOLESALE MODULE
+   WHOLESALE MODULE (REQ 3: INSTANT STOCK DEDUCTION & REQ 1: PREVIEW)
 ======================================================================= */
 function openWholesaleModal(editId = null) {
   populateWholesaleCartSelectors();
@@ -1773,25 +1495,42 @@ document.getElementById("btn-save-wholesale").addEventListener("click", () => {
   if (editingWholesaleId) {
     const idx = DB.wholesale.findIndex(w => w.id === editingWholesaleId);
     if (idx !== -1) {
+      const prevW = DB.wholesale[idx];
+      if (prevW.stockDeducted) {
+        prevW.items.forEach(it => {
+          const prod = DB.products.find(p => p.id === it.productId);
+          if (prod) restoreFIFOBatches(prod, it.qty);
+        });
+      }
       DB.wholesale[idx] = {
-        ...DB.wholesale[idx],
+        ...prevW,
         date, clientName, phone, address, courier, tracking,
         courierCost, packagingCost, items: [...activeWholesaleCart],
-        bill, paid, due, totalCost, profit, status
+        bill, paid, due, totalCost, profit, status, stockDeducted: true
       };
+      activeWholesaleCart.forEach(it => {
+        const prod = DB.products.find(p => p.id === it.productId);
+        if (prod) deductFIFOBatches(prod, it.qty);
+      });
       logActivity("Wholesale", `Updated wholesale order: ${DB.wholesale[idx].invoice}`);
       toast("পাইকারি অর্ডার সফলভাবে আপডেট হয়েছে");
     }
   } else {
     const newInvoice = nextWholesaleInvoice();
-    DB.wholesale.push({
+    const newWs = {
       id: Date.now(), invoice: newInvoice,
       date, clientName, phone, address, courier, tracking,
       courierCost, packagingCost, items: [...activeWholesaleCart],
-      bill, paid, due, totalCost, profit, status
+      bill, paid, due, totalCost, profit, status, stockDeducted: true
+    };
+    // পাইকারি অর্ডার এন্ট্রি হওয়ার সাথেই স্টক মাইনাস
+    activeWholesaleCart.forEach(it => {
+      const prod = DB.products.find(p => p.id === it.productId);
+      if (prod) deductFIFOBatches(prod, it.qty);
     });
+    DB.wholesale.push(newWs);
     logActivity("Wholesale", `Created wholesale order: ${newInvoice}`);
-    toast("পাইকারি অর্ডার সেভ হয়েছে");
+    toast("পাইকারি অর্ডার এন্ট্রি সাথে সাথেই স্টক থেকে মাইনাস হয়েছে");
   }
 
   saveDB(); closeModal("modal-wholesale"); renderWholesale();
@@ -1859,6 +1598,7 @@ function renderWholesale() {
         </select>
       </td>
       <td style="text-align:center">
+        <button class="btn sm ghost" onclick="openOrderPreview(${w.id}, true)" title="Preview Items">Preview</button>
         <button class="btn ghost sm" onclick="openWholesaleModal(${w.id})" title="Edit Order Details">Edit</button>
         <button class="btn danger sm" onclick="deleteWholesale(${w.id})">✕</button>
       </td>
@@ -1868,6 +1608,13 @@ function renderWholesale() {
 
 function deleteWholesale(id) {
   if (!confirm("পাইকারি অর্ডারটি মুছে ফেলতে চান?")) return;
+  const w = DB.wholesale.find(x => x.id === id);
+  if (w && w.stockDeducted && w.items) {
+    w.items.forEach(it => {
+      const prod = DB.products.find(p => p.id === it.productId);
+      if (prod) restoreFIFOBatches(prod, it.qty);
+    });
+  }
   DB.wholesale = DB.wholesale.filter(x => x.id !== id);
   saveDB(); renderWholesale();
 }
@@ -2285,6 +2032,7 @@ function editOrder(id) {
   openModal("modal-order");
 }
 
+// রিকোয়ারমেন্ট ২: অর্ডার এন্ট্রি করার সাথেই স্টক থেকে মাইনাস হবে
 document.getElementById("btn-save-order").addEventListener("click", () => {
   if (!activeCart.length) { toast("কার্টে প্রোডাক্ট যোগ করুন"); return; }
   const name = document.getElementById("f-order-name").value.trim();
@@ -2327,18 +2075,18 @@ document.getElementById("btn-save-order").addEventListener("click", () => {
     }
     const idx = DB.orders.findIndex(x => x.id === editingOrderId);
     const prevOrder = DB.orders[idx];
-    if (prevOrder.stockDeducted && status !== "delivered") revertAutomaticDeductions(prevOrder);
-    DB.orders[idx] = { ...DB.orders[idx], ...data };
-    if (status === "delivered") applyAutomaticDeductions(DB.orders[idx]);
+    if (prevOrder.stockDeducted) revertAutomaticDeductions(prevOrder);
+    DB.orders[idx] = { ...prevOrder, ...data, stockDeducted: false };
+    applyAutomaticDeductions(DB.orders[idx]);
     logActivity("Orders", `Order updated: ${prevOrder.invoice}`);
     toast("অর্ডার আপডেট হয়েছে");
   } else {
     const newInvoice = nextInvoice();
     const newOrd = { id: Date.now(), invoice: newInvoice, stockDeducted: false, ...data };
-    if (status === "delivered") applyAutomaticDeductions(newOrd);
+    applyAutomaticDeductions(newOrd); // এন্ট্রি করার সাথেই স্টক মাইনাস
     DB.orders.push(newOrd);
     logActivity("Orders", `New order created: ${newInvoice}`);
-    toast("নতুন অর্ডার সেভ হয়েছে");
+    toast("নতুন অর্ডার এন্ট্রি সাথে সাথেই স্টক থেকে মাইনাস হয়েছে");
   }
 
   saveDB(); closeModal("modal-order"); renderOrders();
@@ -2351,16 +2099,7 @@ function quickStatus(id, st) {
   }
   const o = DB.orders.find(x => x.id === id);
   if (!o) return;
-  const oldSt = o.status;
   o.status = st;
-
-  if (st === "delivered" && !o.stockDeducted) {
-    applyAutomaticDeductions(o);
-    toast("অর্ডার Delivered: স্টক থেকে পণ্য ও প্যাকেজিং কমেছে");
-  } else if (oldSt === "delivered" && st !== "delivered" && o.stockDeducted) {
-    revertAutomaticDeductions(o);
-    toast("স্টক পুনরায় ফেরত দেওয়া হয়েছে");
-  }
 
   saveDB();
   logActivity("Orders", `Order ${o.invoice} status: ${st}`);
@@ -2428,6 +2167,7 @@ function renderOrders() {
           </select>
         </td>
         <td style="text-align:center">
+          <button class="btn sm ghost" onclick="openOrderPreview(${o.id}, false)" title="Preview Items">Preview</button>
           <button class="btn ghost sm" onclick="editOrder(${o.id})" title="Edit Order Details">Edit</button>
           <button class="btn whatsapp sm" onclick="sendWhatsAppOrderAlert(${o.id})" title="Send WhatsApp Confirmation"><i class="fa-brands fa-whatsapp"></i></button>
           <button class="btn ghost sm" onclick="openSinglePrintModal(${o.id})" title="Print Invoice / Sticker">🖨️</button>
@@ -2489,7 +2229,7 @@ function handleOrderCSVImport(event) {
         stockDeducted: false
       };
 
-      if (importedOrder.status === "delivered") applyAutomaticDeductions(importedOrder);
+      applyAutomaticDeductions(importedOrder);
       DB.orders.push(importedOrder);
       importedCount++;
     }
@@ -2964,12 +2704,9 @@ function renderCustomers() {
 /* =======================================================================
    SECURE BACKEND & DATA MANAGEMENT (PASSWORD: 01814492196)
 ======================================================================= */
-
-// ১. Export JSON Security
-document.getElementById("btn-export").addEventListener("click", () => {
+document.getElementById("btn-export")?.addEventListener("click", () => {
   const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nব্যাকআপ ফাইল (Export JSON) ডাউনলোড করতে পাসওয়ার্ড দিন:");
   if (enteredPass === null) return;
-
   if (enteredPass === "01814492196") {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
     const dlAnchorElem = document.createElement('a');
@@ -2978,26 +2715,23 @@ document.getElementById("btn-export").addEventListener("click", () => {
     document.body.appendChild(dlAnchorElem);
     dlAnchorElem.click();
     dlAnchorElem.remove();
-    toast("সফলভাবে ব্যাকআপ ফাইল ডাউনলোড হয়েছে[cite: 14]");
+    toast("সফলভাবে ব্যাকআপ ফাইল ডাউনলোড হয়েছে");
   } else {
     alert("❌ ভুল পাসওয়ার্ড! ব্যাকআপ ডাউনলোড বাতিল করা হয়েছে।");
   }
 });
 
-// ২. Restore JSON Security
-document.getElementById("btn-import-trigger").addEventListener("click", () => {
+document.getElementById("btn-import-trigger")?.addEventListener("click", () => {
   const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nসিস্টেম রিস্টোর (Restore JSON) করতে পাসওয়ার্ড দিন:");
   if (enteredPass === null) return;
-
   if (enteredPass === "01814492196") {
-    const input = document.getElementById('file-import');
-    if (input) input.click();
+    document.getElementById('file-import')?.click();
   } else {
     alert("❌ ভুল পাসওয়ার্ড! রিস্টোর প্রক্রিয়া বাতিল করা হয়েছে।");
   }
 });
 
-document.getElementById("file-import").addEventListener("change", (e) => {
+document.getElementById("file-import")?.addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -3010,7 +2744,7 @@ document.getElementById("file-import").addEventListener("change", (e) => {
         applyTheme();
         applyBranding();
         renderAll();
-        toast("সফলভাবে সিস্টেম ডেটা রিস্টোর করা হয়েছে[cite: 14]");
+        toast("সফলভাবে সিস্টেম ডেটা রিস্টোর করা হয়েছে");
       } else {
         alert("❌ ফাইল ফরম্যাট সঠিক নয়!");
       }
@@ -3021,17 +2755,14 @@ document.getElementById("file-import").addEventListener("change", (e) => {
   reader.readAsText(file);
 });
 
-// ৩. Reset All System Data Security
-document.getElementById("btn-reset-all").addEventListener("click", () => {
+document.getElementById("btn-reset-all")?.addEventListener("click", () => {
   const currentUser = getActiveUser();
   if (!currentUser || (currentUser.role !== "Admin" && currentUser.name !== "Super Admin")) {
     toast("⚠️ শুধুমাত্র সুপার এডমিন সিস্টেম রিসেট করতে পারবেন!");
     return;
   }
-
   const enteredPass = prompt("⚠️ চরম সতর্কবার্তা!\nসব ডেটা চিরতরে মুছে ফেলতে পাসওয়ার্ড (01814492196) লিখুন:");
   if (enteredPass === null) return;
-
   if (enteredPass === "01814492196") {
     if (confirm("শেষবারের মতো নিশ্চিত করুন: আপনি কি সত্যিই সমস্ত ডাটা রিসেট করতে চান?")) {
       localStorage.removeItem(DB_KEY);
@@ -3040,7 +2771,7 @@ document.getElementById("btn-reset-all").addEventListener("click", () => {
       applyBranding(); 
       renderAll();
       saveDB();
-      toast("সিস্টেমের সমস্ত ডেটা সফলভাবে রিসেট করা হয়েছে[cite: 14]");
+      toast("সিস্টেমের সমস্ত ডেটা সফলভাবে রিসেট করা হয়েছে");
     }
   } else {
     alert("❌ ভুল পাসওয়ার্ড! সিস্টেম রিসেট বাতিল করা হয়েছে।");
