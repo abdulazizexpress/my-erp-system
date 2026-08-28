@@ -2807,7 +2807,7 @@ document.getElementById("btn-reset-all")?.addEventListener("click", () => {
     toast("⚠️ শুধুমাত্র সুপার এডমিন সিস্টেম রিসেট করতে পারবেন!");
     return;
   }
-  const enteredPass = prompt("⚠️ চরম সতর্কবার্তা!\nসব ডেটা চিরতরে মুছে ফেলতে পাসওয়ার্ড (01814492196) লিখুন:");
+  const enteredPass = prompt("⚠️ চরম সতর্কবার্তা!\nসব ডেটা চিরতরে মুছে ফেলতে পাসওয়ার্ড লিখুন:");
   if (enteredPass === null) return;
   if (enteredPass === "01814492196") {
     if (confirm("শেষবারের মতো নিশ্চিত করুন: আপনি কি সত্যিই সমস্ত ডাটা রিসেট করতে চান?")) {
