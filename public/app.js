@@ -5,7 +5,7 @@
 const DB_KEY = "skm_flow_complete_v16";
 const BACKEND_API_ENDPOINT = "/api/data";
 const SESSION_KEY = "erp_active_user_session";
-const CSV_SECURITY_PASS = "159357";
+const CSV_SECURITY_PASS = "15935";
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 
@@ -235,6 +235,9 @@ function closeImagePreview() {
   document.getElementById("preview-modal-img").src = "";
 }
 
+/* =======================================================================
+   REQUISITION 1: ORDER & WHOLESALE PREVIEW MODAL FUNCTIONALITY
+======================================================================= */
 function openOrderPreview(orderId, isWholesale = false) {
   const item = isWholesale ? DB.wholesale.find(x => x.id === orderId) : DB.orders.find(x => x.id === orderId);
   if (!item) return;
@@ -263,6 +266,9 @@ function openOrderPreview(orderId, isWholesale = false) {
   openModal("modal-order-preview");
 }
 
+/* =======================================================================
+   FIFO INVENTORY & BATCH ENGINE
+======================================================================= */
 function getFIFOCost(product, requestQty) {
   if (!product.batches || !product.batches.length) return product.costHistory && product.costHistory.length ? product.costHistory[product.costHistory.length - 1].cost : 0;
   
@@ -300,6 +306,9 @@ function restoreFIFOBatches(product, qty) {
   product.stock = product.batches.reduce((s, b) => s + b.qty, 0);
 }
 
+/* =======================================================================
+   REQUISITION 2 & 3: INSTANT STOCK REDUCTION ON ORDER CREATION
+======================================================================= */
 function applyAutomaticDeductions(order) {
   if (order.stockDeducted) return;
 
@@ -344,6 +353,9 @@ function revertAutomaticDeductions(order) {
   saveDB();
 }
 
+/* =======================================================================
+   LIVE COURIER URLS & API INTEGRATION
+======================================================================= */
 function getCourierLiveTrackingLink(courier, tracking) {
   if (!tracking) return "#";
   const tr = encodeURIComponent(tracking.trim());
@@ -384,6 +396,9 @@ function syncLiveCourierAPI() {
   }, 1200);
 }
 
+/* =======================================================================
+   ONE-CLICK WHATSAPP NOTIFICATION
+======================================================================= */
 function sendWhatsAppOrderAlert(id) {
   const o = DB.orders.find(x => x.id === id);
   if (!o) return;
@@ -404,6 +419,9 @@ function sendWhatsAppOrderAlert(id) {
   logActivity("WhatsApp", `Sent notification to ${o.name} (${o.phone})`);
 }
 
+/* =======================================================================
+   AUTOMATED FRAUD RISK SCORE EVALUATOR
+======================================================================= */
 function evaluateCustomerRisk(phone) {
   const cleanPhone = phone.trim();
   const alertBox = document.getElementById("customer-risk-indicator");
@@ -446,6 +464,9 @@ function evaluateCustomerRisk(phone) {
   }
 }
 
+/* =======================================================================
+   LIVE BARCODE / SKU CAMERA SCANNER
+======================================================================= */
 function openCameraScanner(target) {
   currentScannerTarget = target;
   openModal("modal-scanner");
@@ -497,6 +518,9 @@ function handleBarcodeScanned(code) {
   }
 }
 
+/* =======================================================================
+   BULK 3X3 THERMAL STICKER & INVOICE PRINT
+======================================================================= */
 function toggleSelectAllRows(masterCheckbox) {
   document.querySelectorAll(".chk-order-row").forEach(cb => {
     cb.checked = masterCheckbox.checked;
@@ -571,6 +595,9 @@ function bulkPrint(mode) {
   openModal("modal-print");
 }
 
+/* =======================================================================
+   COD RECONCILIATION LEDGER
+======================================================================= */
 function openCODReconciliationModal() {
   document.getElementById("f-cod-date").value = todayStr();
   document.getElementById("f-cod-batch").value = `COD-${todayStr().replace(/-/g,"")}`;
@@ -613,6 +640,9 @@ document.querySelectorAll("#courier-sub-tabs .tab").forEach(t => {
   });
 });
 
+/* =======================================================================
+   STRICT PER-DEVICE AUTHENTICATION & LOGIN ENFORCEMENT
+======================================================================= */
 function getActiveUser() {
   const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
   if (raw) {
@@ -666,6 +696,9 @@ function logoutUser() {
   toast("সফলভাবে লগআউট হয়েছেন");
 }
 
+/* =======================================================================
+   STRICT ROLE ACCESS CONTROL (ADMIN ONLY FOR SETTINGS)
+======================================================================= */
 function enforceRoleAccessPermissions() {
   const user = getActiveUser();
   if (!user) return;
@@ -789,6 +822,9 @@ function saveUserSecurity() {
   }
 }
 
+/* =======================================================================
+   AUDIT & ACTIVITY LOGGER (INDIVIDUAL ITEM DELETE BY ADMIN ONLY)
+======================================================================= */
 function logActivity(category, description) {
   const currentUser = getActiveUser();
   const now = new Date();
@@ -839,6 +875,9 @@ function deleteSingleActivityLog(id) {
   }
 }
 
+/* =======================================================================
+   GLOBAL OMNI-SEARCH
+======================================================================= */
 function handleGlobalSearch(query) {
   const q = query.trim().toLowerCase();
   const resBox = document.getElementById("global-search-results");
@@ -886,6 +925,9 @@ function navigateToView(viewName) {
   if (btn) btn.click();
 }
 
+/* =======================================================================
+   AUTOMATION & NOTIFICATION CENTER
+======================================================================= */
 function toggleNotificationCenter() {
   const box = document.getElementById("notification-center-box");
   box.style.display = box.style.display === "none" ? "block" : "none";
@@ -942,6 +984,9 @@ function updateNotificationCenter() {
   }
 }
 
+/* =======================================================================
+   COURIER MANAGEMENT & PERFORMANCE
+======================================================================= */
 function autoCalculateShippingCharge() {
   const area = document.getElementById("f-order-area").value;
   const weight = Math.max(1, Number(document.getElementById("f-order-weight").value) || 1);
@@ -1081,6 +1126,9 @@ function renderCourierManagement() {
   }
 }
 
+/* =======================================================================
+   THEME, BRANDING & SECTIONS
+======================================================================= */
 function toggleTheme() {
   const isDark = document.body.classList.toggle("dark-mode");
   DB.settings.theme = isDark ? "dark" : "light";
@@ -1185,6 +1233,9 @@ function saveSectionTitles() {
   logActivity("Settings", "Dashboard Sections Customized");
 }
 
+/* =======================================================================
+   DRAWER NAVIGATION CONTROLLER
+======================================================================= */
 const appSidebar = document.getElementById("app-sidebar");
 const sidebarBackdrop = document.getElementById("sidebar-backdrop");
 
@@ -1241,6 +1292,9 @@ document.querySelectorAll("[data-close]").forEach(b => {
   b.addEventListener("click", (e) => e.target.closest(".modal-bg").classList.remove("open"));
 });
 
+/* =======================================================================
+   DASHBOARD CONTROLLER (REQ 4: DEFAULT 'TODAY')
+======================================================================= */
 document.querySelectorAll("#dash-period button").forEach(b => {
   b.addEventListener("click", () => {
     document.querySelectorAll("#dash-period button").forEach(x => x.classList.remove("active"));
@@ -1313,6 +1367,9 @@ function renderDashboard() {
   updateNotificationCenter();
 }
 
+/* =======================================================================
+   WHOLESALE MODULE (REQ 3: INSTANT STOCK DEDUCTION & REQ 1: PREVIEW)
+======================================================================= */
 function openWholesaleModal(editId = null) {
   populateWholesaleCartSelectors();
 
@@ -1562,6 +1619,9 @@ function deleteWholesale(id) {
   saveDB(); renderWholesale();
 }
 
+/* =======================================================================
+   PRODUCT IMAGE COMPRESSOR & FIFO CONTROLLER
+======================================================================= */
 let currentProductImageBase64 = "";
 
 function handleProductImageUpload(event) {
@@ -1795,6 +1855,9 @@ function renderProducts() {
   });
 }
 
+/* =======================================================================
+   PACKAGING INVENTORY
+======================================================================= */
 if (document.getElementById("btn-new-packaging")) {
   document.getElementById("btn-new-packaging").addEventListener("click", () => {
     document.getElementById("pack-modal-title").textContent = "New Packaging Material";
@@ -1849,6 +1912,9 @@ function deletePackaging(id) {
   saveDB(); renderPackaging();
 }
 
+/* =======================================================================
+   RETAIL ORDERS, PACKAGING PREVIEW & FULL EDIT
+======================================================================= */
 function parseAIMessage() {
   const text = document.getElementById("ai-paste-box").value;
   if (!text) return;
@@ -2016,7 +2082,7 @@ document.getElementById("btn-save-order").addEventListener("click", () => {
   } else {
     const newInvoice = nextInvoice();
     const newOrd = { id: Date.now(), invoice: newInvoice, stockDeducted: false, ...data };
-    applyAutomaticDeductions(newOrd);
+    applyAutomaticDeductions(newOrd); 
     DB.orders.push(newOrd);
     logActivity("Orders", `New order created: ${newInvoice}`);
     toast("নতুন অর্ডার এন্ট্রি সাথে সাথেই স্টক থেকে মাইনাস হয়েছে");
@@ -2130,122 +2196,6 @@ function openSinglePrintModal(id) {
   selectedOrderIds.add(id);
   bulkPrint('invoice');
 }
-
-/* =======================================================================
-   UPDATED CSV FUNCTIONS WITH PASSWORD SECURITY (159357)
-======================================================================= */
-
-function exportOrdersToCSV() {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nOrders Report CSV ডাউনলোড করতে পাসওয়ার্ড (159357) দিন:");
-  if (enteredPass === null) return;
-  if (enteredPass === CSV_SECURITY_PASS) {
-    let csv = "Invoice,Date,Customer,Phone,Courier,Tracking,Status,Total\n";
-    DB.orders.forEach(o => csv += `"${o.invoice}","${o.date}","${o.name}","${o.phone}","${o.courier}","${o.tracking || ''}","${o.status}",${o.grandTotal}\n`);
-    downloadCSV(csv, `orders-${todayStr()}.csv`);
-    toast("CSV ফাইল সফলভাবে ডাউনলোড হয়েছে");
-  } else {
-    alert("❌ ভুল পাসওয়ার্ড!");
-  }
-}
-
-function exportProfitCSV() {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nProfit & Loss CSV ডাউনলোড করতে পাসওয়ার্ড (159357) দিন:");
-  if (enteredPass === null) return;
-  if (enteredPass === CSV_SECURITY_PASS) {
-    const { orders, expenses } = getPeriodFilteredData(reportPeriod, true);
-    const rev = orders.filter(o => o.status === "delivered").reduce((s, o) => s + o.grandTotal, 0);
-    downloadCSV(`Revenue,${rev}\nExpenses,${expenses.reduce((s, e) => s + Number(e.amount || 0), 0)}\n`, "Profit_Report.csv");
-    toast("CSV ফাইল সফলভাবে ডাউনলোড হয়েছে");
-  } else {
-    alert("❌ ভুল পাসওয়ার্ড!");
-  }
-}
-
-function exportProductCSV() {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nProduct Sales Performance CSV ডাউনলোড করতে পাসওয়ার্ড (159357) দিন:");
-  if (enteredPass === null) return;
-  if (enteredPass === CSV_SECURITY_PASS) {
-    let csv = "Product,Orders\n";
-    DB.products.forEach(p => csv += `"${p.name}",${p.stock}\n`);
-    downloadCSV(csv, "Products_Report.csv");
-    toast("CSV ফাইল সফলভাবে ডাউনলোড হয়েছে");
-  } else {
-    alert("❌ ভুল পাসওয়ার্ড!");
-  }
-}
-
-function exportCourierCSV() {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nCourier Audit CSV ডাউনলোড করতে পাসওয়ার্ড (159357) দিন:");
-  if (enteredPass === null) return;
-  if (enteredPass === CSV_SECURITY_PASS) {
-    let csv = "Invoice,Courier,Status,Amount\n";
-    DB.orders.forEach(o => csv += `"${o.invoice}","${o.courier}","${o.status}",${o.grandTotal}\n`);
-    downloadCSV(csv, "Courier_Report.csv");
-    toast("CSV ফাইল সফলভাবে ডাউনলোড হয়েছে");
-  } else {
-    alert("❌ ভুল পাসওয়ার্ড!");
-  }
-}
-
-function downloadCSV(content, filename) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8;" }));
-  a.download = filename;
-  a.click();
-}
-
-document.getElementById("file-import-csv")?.addEventListener("change", (e) => {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nCSV ফাইল ইমপোর্ট করতে পাসওয়ার্ড (159357) দিন:");
-  if (enteredPass === null) { e.target.value = ""; return; }
-  
-  if (enteredPass === CSV_SECURITY_PASS) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      const text = event.target.result;
-      const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== "");
-      if (lines.length <= 1) { toast("CSV ফাইলে ডাটা নেই"); return; }
-
-      let importedCount = 0;
-      for (let i = 1; i < lines.length; i++) {
-        const vals = lines[i].split(",").map(v => v.replace(/^"|"$/g, '').trim());
-        if (vals.length < 3) continue;
-        
-        const importedOrder = {
-          id: Date.now() + i,
-          invoice: vals[0] || nextInvoice(),
-          date: vals[1] || todayStr(),
-          name: vals[2] || "Customer",
-          phone: vals[3] || "",
-          courier: vals[4] || "Steadfast",
-          tracking: vals[5] || "",
-          status: (vals[6] || "delivered").toLowerCase(),
-          items: [{ productId: 1, name: "Imported Product", qty: 1, price: Number(vals[7]) || 1200, cost: Number(vals[8]) || 800 }],
-          packagingId: 0, packagingCost: 0,
-          subtotal: Number(vals[7]) || 1200, delivery: 0, advance: 0, discount: 0,
-          grandTotal: Number(vals[7]) || 1200, totalCOGS: Number(vals[8]) || 800, due: 0,
-          stockDeducted: false
-        };
-
-        applyAutomaticDeductions(importedOrder);
-        DB.orders.push(importedOrder);
-        importedCount++;
-      }
-
-      saveDB();
-      logActivity("CSV Import", `Imported ${importedCount} orders`);
-      renderAll();
-      toast(`সফলভাবে ${importedCount} টি অর্ডার ইমপোর্ট হয়েছে`);
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  } else {
-    alert("❌ ভুল পাসওয়ার্ড! ইমপোর্ট বাতিল করা হয়েছে।");
-    e.target.value = "";
-  }
-});
 
 /* =======================================================================
    ACCOUNTING & PURCHASE HISTORY
@@ -2455,6 +2405,9 @@ function deletePurchase(id) {
   saveDB(); renderAccounting();
 }
 
+/* =======================================================================
+   REPORTS CONTROLLER
+======================================================================= */
 document.querySelectorAll(".rep-tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".rep-tab-btn").forEach(b => b.classList.remove("active"));
@@ -2598,6 +2551,36 @@ function renderPackagingReport(orders) {
   }
 }
 
+function exportProfitCSV() {
+  const { orders, expenses } = getPeriodFilteredData(reportPeriod, true);
+  const rev = orders.filter(o => o.status === "delivered").reduce((s, o) => s + o.grandTotal, 0);
+  downloadCSV(`Revenue,${rev}\nExpenses,${expenses.reduce((s, e) => s + Number(e.amount || 0), 0)}\n`, "Profit_Report.csv");
+}
+function exportProductCSV() {
+  let csv = "Product,Orders\n";
+  DB.products.forEach(p => csv += `"${p.name}",${p.stock}\n`);
+  downloadCSV(csv, "Products_Report.csv");
+}
+function exportCourierCSV() {
+  let csv = "Invoice,Courier,Status,Amount\n";
+  DB.orders.forEach(o => csv += `"${o.invoice}","${o.courier}","${o.status}",${o.grandTotal}\n`);
+  downloadCSV(csv, "Courier_Report.csv");
+}
+function exportOrdersToCSV() {
+  let csv = "Invoice,Date,Customer,Phone,Courier,Tracking,Status,Total\n";
+  DB.orders.forEach(o => csv += `"${o.invoice}","${o.date}","${o.name}","${o.phone}","${o.courier}","${o.tracking || ''}","${o.status}",${o.grandTotal}\n`);
+  downloadCSV(csv, `orders-${todayStr()}.csv`);
+}
+function downloadCSV(content, filename) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8;" }));
+  a.download = filename;
+  a.click();
+}
+
+/* =======================================================================
+   CUSTOMERS & FRAUD PROTECTION
+======================================================================= */
 if (document.getElementById("btn-new-blacklist")) {
   document.getElementById("btn-new-blacklist").addEventListener("click", () => {
     document.getElementById("f-black-phone").value = "";
@@ -2672,6 +2655,9 @@ function renderCustomers() {
   }
 }
 
+/* =======================================================================
+   SECURE BACKEND & DATA MANAGEMENT (PASSWORD: 01814492196)
+======================================================================= */
 document.getElementById("btn-export")?.addEventListener("click", () => {
   const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nব্যাকআপ ফাইল (Export JSON) ডাউনলোড করতে পাসওয়ার্ড দিন:");
   if (enteredPass === null) return;
@@ -2746,6 +2732,65 @@ document.getElementById("btn-reset-all")?.addEventListener("click", () => {
   }
 });
 
+/* =======================================================================
+   SECURE CSV ORDER IMPORT HANDLER (PASSWORD: 15935)
+======================================================================= */
+document.getElementById("file-import-csv")?.addEventListener("change", (e) => {
+  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nCSV ফাইল ইমপোর্ট করতে পাসওয়ার্ড (15935) দিন:");
+  if (enteredPass === null) { e.target.value = ""; return; }
+  
+  if (enteredPass === CSV_SECURITY_PASS) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const text = event.target.result;
+      const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== "");
+      if (lines.length <= 1) { toast("CSV ফাইলে ডাটা নেই"); return; }
+
+      let importedCount = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const vals = lines[i].split(",").map(v => v.replace(/^"|"$/g, '').trim());
+        if (vals.length < 3) continue;
+        
+        const importedOrder = {
+          id: Date.now() + i,
+          invoice: vals[0] || nextInvoice(),
+          date: vals[1] || todayStr(),
+          name: vals[2] || "Customer",
+          phone: vals[3] || "",
+          courier: vals[4] || "Steadfast",
+          tracking: vals[5] || "",
+          status: (vals[6] || "delivered").toLowerCase(),
+          items: [{ productId: 1, name: "Imported Product", qty: 1, price: Number(vals[7]) || 1200, cost: Number(vals[8]) || 800 }],
+          packagingId: 0, packagingCost: 0,
+          subtotal: Number(vals[7]) || 1200, delivery: 0, advance: 0, discount: 0,
+          grandTotal: Number(vals[7]) || 1200, totalCOGS: Number(vals[8]) || 800, due: 0,
+          stockDeducted: false
+        };
+
+        applyAutomaticDeductions(importedOrder);
+        DB.orders.push(importedOrder);
+        importedCount++;
+      }
+
+      saveDB();
+      logActivity("CSV Import", `Imported ${importedCount} orders`);
+      renderAll();
+      toast(`সফলভাবে ${importedCount} টি অর্ডার ইমপোর্ট হয়েছে`);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  } else {
+    alert("❌ ভুল পাসওয়ার্ড! ইমপোর্ট বাতিল করা হয়েছে।");
+    e.target.value = "";
+  }
+});
+
+/* =======================================================================
+   SYSTEM BOOTSTRAP INITIALIZER
+======================================================================= */
 function renderAll() {
   renderDashboard();
   renderOrders();
