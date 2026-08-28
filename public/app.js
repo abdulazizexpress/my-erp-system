@@ -2556,7 +2556,7 @@ function renderPackagingReport(orders) {
 const CSV_SECURITY_PASS = "159357";
 
 function exportOrdersToCSV() {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nOrders Report CSV ডাউনলোড করতে পাসওয়ার্ড (159357) দিন:");
+  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nOrders Report CSV ডাউনলোড করতে পাসওয়ার্ড দিন:");
   if (enteredPass === null) return;
   if (enteredPass === CSV_SECURITY_PASS) {
     let csv = "Invoice,Date,Customer,Phone,Courier,Tracking,Status,Total\n";
@@ -2569,7 +2569,7 @@ function exportOrdersToCSV() {
 }
 
 function exportProfitCSV() {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nProfit & Loss CSV ডাউনলোড করতে পাসওয়ার্ড (159357) দিন:");
+  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nProfit & Loss CSV ডাউনলোড করতে পাসওয়ার্ড দিন:");
   if (enteredPass === null) return;
   if (enteredPass === CSV_SECURITY_PASS) {
     const { orders, expenses } = getPeriodFilteredData(reportPeriod, true);
@@ -2582,7 +2582,7 @@ function exportProfitCSV() {
 }
 
 function exportProductCSV() {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nProduct Sales Performance CSV ডাউনলোড করতে পাসওয়ার্ড (159357) দিন:");
+  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nProduct Sales Performance CSV ডাউনলোড করতে পাসওয়ার্ড দিন:");
   if (enteredPass === null) return;
   if (enteredPass === CSV_SECURITY_PASS) {
     let csv = "Product,Orders\n";
@@ -2595,7 +2595,7 @@ function exportProductCSV() {
 }
 
 function exportCourierCSV() {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nCourier Audit CSV ডাউনলোড করতে পাসওয়ার্ড (159357) দিন:");
+  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nCourier Audit CSV ডাউনলোড করতে পাসওয়ার্ড দিন:");
   if (enteredPass === null) return;
   if (enteredPass === CSV_SECURITY_PASS) {
     let csv = "Invoice,Courier,Status,Amount\n";
@@ -2615,7 +2615,7 @@ function downloadCSV(content, filename) {
 }
 
 function handleOrderCSVImport(event) {
-  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nCSV ফাইল ইমপোর্ট করতে পাসওয়ার্ড (159357) দিন:");
+  const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nCSV ফাইল ইমপোর্ট করতে পাসওয়ার্ড দিন:");
   if (enteredPass === null) { event.target.value = ""; return; }
 
   if (enteredPass === "159357") {
