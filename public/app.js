@@ -2614,57 +2614,60 @@ function downloadCSV(content, filename) {
   a.click();
 }
 
-function handleOrderCSVImport(event) {
+function triggerCSVImport() {
   const enteredPass = prompt("🔒 নিরাপত্তা যাচাই:\nCSV ফাইল ইমপোর্ট করতে পাসওয়ার্ড দিন:");
-  if (enteredPass === null) { event.target.value = ""; return; }
+  if (enteredPass === null) return;
 
   if (enteredPass === "159357") {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const text = e.target.result;
-      const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== "");
-      if (lines.length <= 1) { toast("CSV ফাইলে ডাটা নেই"); return; }
-
-      let importedCount = 0;
-      for (let i = 1; i < lines.length; i++) {
-        const vals = lines[i].split(",").map(v => v.replace(/^"|"$/g, '').trim());
-        if (vals.length < 3) continue;
-        
-        const importedOrder = {
-          id: Date.now() + i,
-          invoice: vals[0] || nextInvoice(),
-          date: vals[1] || todayStr(),
-          name: vals[2] || "Customer",
-          phone: vals[3] || "",
-          courier: vals[4] || "Steadfast",
-          tracking: vals[5] || "",
-          status: (vals[6] || "delivered").toLowerCase(),
-          items: [{ productId: 1, name: "Imported Product", qty: 1, price: Number(vals[7]) || 1200, cost: Number(vals[8]) || 800 }],
-          packagingId: 0, packagingCost: 0,
-          subtotal: Number(vals[7]) || 1200, delivery: 0, advance: 0, discount: 0,
-          grandTotal: Number(vals[7]) || 1200, totalCOGS: Number(vals[8]) || 800, due: 0,
-          stockDeducted: false
-        };
-
-        applyAutomaticDeductions(importedOrder);
-        DB.orders.push(importedOrder);
-        importedCount++;
-      }
-
-      saveDB();
-      logActivity("CSV Import", `Imported ${importedCount} orders`);
-      renderAll();
-      toast(`সফলভাবে ${importedCount} টি অর্ডার ইমপোর্ট হয়েছে`);
-    };
-    reader.readAsText(file);
-    event.target.value = "";
+    document.getElementById('file-import-csv').click();
   } else {
     alert("❌ ভুল পাসওয়ার্ড! ইমপোর্ট বাতিল করা হয়েছে।");
-    event.target.value = "";
   }
+}
+
+function handleOrderCSVImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== "");
+    if (lines.length <= 1) { toast("CSV ফাইলে ডাটা নেই"); return; }
+
+    let importedCount = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const vals = lines[i].split(",").map(v => v.replace(/^"|"$/g, '').trim());
+      if (vals.length < 3) continue;
+      
+      const importedOrder = {
+        id: Date.now() + i,
+        invoice: vals[0] || nextInvoice(),
+        date: vals[1] || todayStr(),
+        name: vals[2] || "Customer",
+        phone: vals[3] || "",
+        courier: vals[4] || "Steadfast",
+        tracking: vals[5] || "",
+        status: (vals[6] || "delivered").toLowerCase(),
+        items: [{ productId: 1, name: "Imported Product", qty: 1, price: Number(vals[7]) || 1200, cost: Number(vals[8]) || 800 }],
+        packagingId: 0, packagingCost: 0,
+        subtotal: Number(vals[7]) || 1200, delivery: 0, advance: 0, discount: 0,
+        grandTotal: Number(vals[7]) || 1200, totalCOGS: Number(vals[8]) || 800, due: 0,
+        stockDeducted: false
+      };
+
+      applyAutomaticDeductions(importedOrder);
+      DB.orders.push(importedOrder);
+      importedCount++;
+    }
+
+    saveDB();
+    logActivity("CSV Import", `Imported ${importedCount} orders`);
+    renderAll();
+    toast(`সফলভাবে ${importedCount} টি অর্ডার ইমপোর্ট হয়েছে`);
+  };
+  reader.readAsText(file);
+  event.target.value = "";
 }
 
 /* =======================================================================
