@@ -396,6 +396,46 @@ function syncLiveCourierAPI() {
 }
 
 /* =======================================================================
+   BULLETPROOF PHONE NUMBER FORMATTER & VALIDATOR
+======================================================================= */
+function formatAndValidateFraudPhone(input) {
+  let val = input.value || "";
+
+  // ১. বাংলা সংখ্যা টাইপ করলে সাথে সাথে ইংরেজিতে রূপান্তর
+  const bnToEn = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
+  val = val.replace(/[০-৯]/g, match => bnToEn[match]);
+
+  // ২. হাইফেন, স্পেস, ব্র্যাকেট, ড্যাশ ও সব নন-ডিজিট মুছে ফেলা
+  let digits = val.replace(/[^0-9]/g, '');
+
+  // ৩. +88, 88 বা 0088 কান্ট্রি কোড সহ পেস্ট করলে তা স্বয়ংক্রিয়ভাবে মুছে ফেলা
+  if (digits.startsWith("8801")) {
+    digits = digits.slice(2);
+  } else if (digits.startsWith("008801")) {
+    digits = digits.slice(4);
+  }
+
+  // ৪. অতিরিক্ত ডিজিট থাকলে কেটে ঠিক ১১ ডিজিটে সীমাবদ্ধ রাখা
+  if (digits.length > 11) {
+    digits = digits.slice(0, 11);
+  }
+
+  input.value = digits;
+
+  // ৫. ১১ ডিজিটের কম হলে লাল রঙের ওয়ার্নিং মেসেজ ও বর্ডার দেখানো
+  const errBox = document.getElementById("fraud-phone-error");
+  if (errBox) {
+    if (digits.length > 0 && digits.length < 11) {
+      errBox.style.display = "block";
+      input.style.borderColor = "#dc2626";
+    } else {
+      errBox.style.display = "none";
+      input.style.borderColor = "";
+    }
+  }
+}
+
+/* =======================================================================
    ONE-CLICK WHATSAPP NOTIFICATION
 ======================================================================= */
 function sendWhatsAppOrderAlert(id) {
