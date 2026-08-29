@@ -436,6 +436,123 @@ function formatAndValidateFraudPhone(input) {
 }
 
 /* =======================================================================
+   LIVE FRAUD API FETCHER & MANUAL CHECKER
+======================================================================= */
+async function fetchLiveFraudDataFromAPI(phone) {
+  const fraudConfig = (DB.settings && DB.settings.fraudCheckerApi) || {};
+  const apiUrl = fraudConfig.apiUrl || "https://api.bdcourier.com/courier-check";
+  const apiKey = fraudConfig.apiKey || "";
+
+  if (apiUrl && apiKey) {
+    try {
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "api-key": apiKey
+        },
+        body: JSON.stringify({ phone: phone })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return {
+          total: json.total_parcel || json.total || json.orders || 0,
+          success: json.success_parcel || json.success || json.delivered || 0,
+          cancel: json.cancelled_parcel || json.cancel || json.returned || 0,
+          source: "Live API"
+        };
+      }
+    } catch (e) {
+      console.warn("API request fallback to internal database:", e);
+    }
+  }
+
+  // Fallback to internal database metrics
+  const cleanPhone = phone.trim();
+  const pastOrders = DB.orders.filter(o => o.phone.trim() === cleanPhone);
+  const total = pastOrders.length;
+  const success = pastOrders.filter(o => o.status === "delivered").length;
+  const cancel = pastOrders.filter(o => o.status === "returned" || o.status === "cancelled").length;
+
+  return { total, success, cancel, source: "Internal DB" };
+}
+
+async function runManualFraudCheck() {
+  const phoneInput = document.getElementById("fraud-search-phone");
+  if (!phoneInput) return;
+  
+  const phone = phoneInput.value.trim();
+  const errBox = document.getElementById("fraud-phone-error");
+
+  if (!phone || phone.length !== 11) {
+    if (errBox) errBox.style.display = "block";
+    phoneInput.style.borderColor = "#dc2626";
+    toast("অনুগ্রহ করে সম্পূর্ণ ১১ ডিজিটের মোবাইল নম্বর দিন");
+    return;
+  }
+  if (errBox) errBox.style.display = "none";
+  phoneInput.style.borderColor = "";
+
+  const resContainer = document.getElementById("fraud-result-container");
+  if (!resContainer) return;
+
+  resContainer.style.display = "block";
+  resContainer.innerHTML = `<div class="card" style="text-align:center; padding:24px;"><i class="fa-solid fa-spinner fa-spin text-purple" style="font-size:24px;"></i><p style="margin-top:8px;">ডাটাবেজ থেকে লাইভ তথ্য লোড হচ্ছে...</p></div>`;
+
+  try {
+    const data = await fetchLiveFraudDataFromAPI(phone);
+    const total = data.total || 0;
+    const successRate = total > 0 ? ((data.success / total) * 100).toFixed(1) : "100.0";
+    const cancelRate = total > 0 ? ((data.cancel / total) * 100).toFixed(1) : "0.0";
+
+    resContainer.innerHTML = `
+      <div style="background:#dcfce7; color:#16a34a; border:1px solid #16a34a; padding:12px 16px; border-radius:10px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:16px; font-weight:800;"><i class="fa-solid fa-shield-halved"></i> Fraud Check Result</div>
+          <div style="font-size:12px; margin-top:2px;">• Success Rate: ${successRate}% | Total Orders: ${total}</div>
+        </div>
+        <span class="badge b-delivered" style="font-size:11px;">${data.source || 'API'}</span>
+      </div>
+
+      <div class="grid g-4" style="margin-bottom:16px;">
+        <div class="card" style="text-align:center; padding:14px;">
+          <div class="label muted" style="font-size:11.5px; font-weight:700;">Total Orders</div>
+          <div class="value" style="font-size:26px; font-weight:900; color:var(--blue); margin-top:4px;">${total}</div>
+        </div>
+        <div class="card" style="text-align:center; padding:14px;">
+          <div class="label muted" style="font-size:11.5px; font-weight:700;">Successful</div>
+          <div class="value" style="font-size:26px; font-weight:900; color:var(--green); margin-top:4px;">${data.success || 0}</div>
+        </div>
+        <div class="card" style="text-align:center; padding:14px;">
+          <div class="label muted" style="font-size:11.5px; font-weight:700;">Cancelled</div>
+          <div class="value" style="font-size:26px; font-weight:900; color:var(--red); margin-top:4px;">${data.cancel || 0}</div>
+        </div>
+        <div class="card" style="text-align:center; padding:14px;">
+          <div class="label muted" style="font-size:11.5px; font-weight:700;">Success Rate</div>
+          <div class="value" style="font-size:26px; font-weight:900; color:var(--purple); margin-top:4px;">${successRate}%</div>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    resContainer.innerHTML = `<div class="card" style="color:var(--red); text-align:center; padding:16px;">⚠️ ডেটা লোড করার সময় ত্রুটি ঘটেছে। আবার চেষ্টা করুন।</div>`;
+  }
+}
+
+function checkOrderPhoneFraudAPI() {
+  const phone = document.getElementById("f-order-phone").value.trim();
+  if (!phone) { toast("ফোন নম্বর দিন"); return; }
+  const cleanPhone = phone.replace(/[^0-9]/g, "");
+  navigateToView("fraud-checker");
+  const sPhone = document.getElementById("fraud-search-phone");
+  if (sPhone) {
+    sPhone.value = cleanPhone;
+    formatAndValidateFraudPhone(sPhone);
+    runManualFraudCheck();
+  }
+}
+
+/* =======================================================================
    ONE-CLICK WHATSAPP NOTIFICATION
 ======================================================================= */
 function sendWhatsAppOrderAlert(id) {
