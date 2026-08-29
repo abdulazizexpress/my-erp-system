@@ -533,8 +533,6 @@ async function fetchLiveFraudDataFromAPI(phone) {
 
 async function runManualFraudCheck() {
   const phoneInput = document.getElementById("fraud-search-phone");
-  if (!phoneInput) return;
-  
   const phone = phoneInput.value.trim();
   const errBox = document.getElementById("fraud-phone-error");
 
@@ -548,47 +546,132 @@ async function runManualFraudCheck() {
   phoneInput.style.borderColor = "";
 
   const resContainer = document.getElementById("fraud-result-container");
-  if (!resContainer) return;
-
   resContainer.style.display = "block";
-  resContainer.innerHTML = `<div class="card" style="text-align:center; padding:24px;"><i class="fa-solid fa-spinner fa-spin text-purple" style="font-size:24px;"></i><p style="margin-top:8px;">ডাটাবেজ থেকে লাইভ তথ্য লোড হচ্ছে...</p></div>`;
+  resContainer.innerHTML = `<div class="card" style="text-align:center; padding:24px;"><i class="fa-solid fa-spinner fa-spin text-purple" style="font-size:24px;"></i><p style="margin-top:8px;">BD Courier ডাটাবেজ থেকে লাইভ তথ্য লোড হচ্ছে...</p></div>`;
 
-  try {
-    const data = await fetchLiveFraudDataFromAPI(phone);
-    const total = data.total || 0;
-    const successRate = total > 0 ? ((data.success / total) * 100).toFixed(1) : "100.0";
-    const cancelRate = total > 0 ? ((data.cancel / total) * 100).toFixed(1) : "0.0";
+  const isBlacklisted = DB.blacklist.some(b => b.phone.trim() === phone);
+  const data = await fetchLiveFraudDataFromAPI(phone);
 
-    resContainer.innerHTML = `
-      <div style="background:#dcfce7; color:#16a34a; border:1px solid #16a34a; padding:12px 16px; border-radius:10px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-size:16px; font-weight:800;"><i class="fa-solid fa-shield-halved"></i> Fraud Check Result</div>
-          <div style="font-size:12px; margin-top:2px;">• Success Rate: ${successRate}% | Total Orders: ${total}</div>
-        </div>
-        <span class="badge b-delivered" style="font-size:11px;">${data.source || 'API'}</span>
+  const total = data.total;
+  const successRate = total > 0 ? ((data.success / total) * 100).toFixed(1) : "100.0";
+  const cancelRate = total > 0 ? ((data.cancel / total) * 100).toFixed(1) : "0.0";
+
+  let statusTitle = "Safe";
+  let statusSubtitle = `Strong delivery success rate (${successRate}%)`;
+  let alertBg = "#dcfce7";
+  let alertColor = "#16a34a";
+
+  if (isBlacklisted) {
+    statusTitle = "High Risk (Blacklisted)";
+    statusSubtitle = "এই নম্বরটি ফ্রড ব্ল্যাকলিস্টে রয়েছে!";
+    alertBg = "#fee2e2";
+    alertColor = "#dc2626";
+  } else if (total > 0 && Number(cancelRate) >= 40) {
+    statusTitle = "High Risk";
+    statusSubtitle = `High return rate detected (${cancelRate}%)`;
+    alertBg = "#fee2e2";
+    alertColor = "#dc2626";
+  } else if (total > 0 && Number(cancelRate) > 15) {
+    statusTitle = "Moderate Risk";
+    statusSubtitle = `Moderate cancel rate (${cancelRate}%)`;
+    alertBg = "#fef3c7";
+    alertColor = "#d97706";
+  }
+
+  resContainer.innerHTML = `
+    <div style="background:${alertBg}; color:${alertColor}; border:1px solid ${alertColor}; padding:12px 16px; border-radius:10px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-size:16px; font-weight:800;"><i class="fa-solid fa-shield-halved"></i> ${statusTitle}</div>
+        <div style="font-size:12px; margin-top:2px;">• ${statusSubtitle}</div>
       </div>
+      <span class="badge ${data.isSuccess ? 'b-delivered' : 'b-pending'}" style="font-size:11px;">${data.source}</span>
+    </div>
 
-      <div class="grid g-4" style="margin-bottom:16px;">
-        <div class="card" style="text-align:center; padding:14px;">
-          <div class="label muted" style="font-size:11.5px; font-weight:700;">Total Orders</div>
-          <div class="value" style="font-size:26px; font-weight:900; color:var(--blue); margin-top:4px;">${total}</div>
-        </div>
-        <div class="card" style="text-align:center; padding:14px;">
-          <div class="label muted" style="font-size:11.5px; font-weight:700;">Successful</div>
-          <div class="value" style="font-size:26px; font-weight:900; color:var(--green); margin-top:4px;">${data.success || 0}</div>
-        </div>
-        <div class="card" style="text-align:center; padding:14px;">
-          <div class="label muted" style="font-size:11.5px; font-weight:700;">Cancelled</div>
-          <div class="value" style="font-size:26px; font-weight:900; color:var(--red); margin-top:4px;">${data.cancel || 0}</div>
-        </div>
-        <div class="card" style="text-align:center; padding:14px;">
-          <div class="label muted" style="font-size:11.5px; font-weight:700;">Success Rate</div>
-          <div class="value" style="font-size:26px; font-weight:900; color:var(--purple); margin-top:4px;">${successRate}%</div>
+    <div class="grid g-4" style="margin-bottom:16px;">
+      <div class="card" style="text-align:center; padding:14px;">
+        <div class="label muted" style="font-size:11.5px; font-weight:700;">Total Orders</div>
+        <div class="value" style="font-size:26px; font-weight:900; color:var(--blue); margin-top:4px;">${total}</div>
+        <div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">All time</div>
+      </div>
+      <div class="card" style="text-align:center; padding:14px;">
+        <div class="label muted" style="font-size:11.5px; font-weight:700;">Successful</div>
+        <div class="value" style="font-size:26px; font-weight:900; color:var(--green); margin-top:4px;">${data.success}</div>
+        <div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">Delivered</div>
+      </div>
+      <div class="card" style="text-align:center; padding:14px;">
+        <div class="label muted" style="font-size:11.5px; font-weight:700;">Cancelled</div>
+        <div class="value" style="font-size:26px; font-weight:900; color:var(--red); margin-top:4px;">${data.cancel}</div>
+        <div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">Failed / Returned</div>
+      </div>
+      <div class="card" style="text-align:center; padding:14px;">
+        <div class="label muted" style="font-size:11.5px; font-weight:700;">Success Rate</div>
+        <div class="value" style="font-size:26px; font-weight:900; color:var(--purple); margin-top:4px;">${successRate}%</div>
+        <div class="rev-progress-track" style="height:6px; margin-top:6px;">
+          <div class="rev-fill bg-emerald-500" style="width:${successRate}%;"></div>
         </div>
       </div>
-    `;
-  } catch (err) {
-    resContainer.innerHTML = `<div class="card" style="color:var(--red); text-align:center; padding:16px;">⚠️ ডেটা লোড করার সময় ত্রুটি ঘটেছে। আবার চেষ্টা করুন।</div>`;
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:14px;">
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="background:var(--surface-2);">
+            <th style="padding:10px 14px;">COURIER</th>
+            <th class="num" style="padding:10px 14px;">TOTAL</th>
+            <th class="num text-emerald-600" style="padding:10px 14px;">SUCCESS</th>
+            <th class="num text-rose-600" style="padding:10px 14px;">CANCEL</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(data.couriers || []).map(c => `
+            <tr>
+              <td style="padding:10px 14px; font-weight:700;">${c.name}</td>
+              <td class="num mono" style="padding:10px 14px; font-weight:800;">${c.total}</td>
+              <td class="num mono text-emerald-600" style="padding:10px 14px; font-weight:800;">${c.success}</td>
+              <td class="num mono text-rose-600" style="padding:10px 14px; font-weight:800;">${c.cancel}</td>
+            </tr>
+          `).join("")}
+          <tr style="background:var(--surface-2); font-weight:900;">
+            <td style="padding:10px 14px;">Total</td>
+            <td class="num mono" style="padding:10px 14px;">${total}</td>
+            <td class="num mono text-emerald-600" style="padding:10px 14px;">${data.success}</td>
+            <td class="num mono text-rose-600" style="padding:10px 14px;">${data.cancel}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <button class="btn danger sm" onclick="quickAddToBlacklist('${phone}')"><i class="fa-solid fa-ban"></i> ব্ল্যাকলিস্টে যুক্ত করুন</button>
+      <button class="btn ghost sm" onclick="openNewOrderWithPhone('${phone}')"><i class="fa-solid fa-cart-plus"></i> এই নম্বরে অর্ডার তৈরি করুন</button>
+    </div>
+  `;
+}
+
+function quickAddToBlacklist(phone) {
+  if (!phone) return;
+  const isAlready = DB.blacklist.some(b => b.phone.trim() === phone);
+  if (isAlready) {
+    toast("এই নম্বরটি আগেই ব্ল্যাকলিস্টে যুক্ত করা আছে");
+    return;
+  }
+  const reason = prompt("ব্ল্যাকলিস্ট করার কারণ লিখুন:", "অর্ডার ক্যান্সেল / ফ্রড রেকর্ড");
+  if (reason === null) return;
+
+  DB.blacklist.push({ id: Date.now(), phone, reason: reason.trim() || "Fraud History", date: todayStr() });
+  saveDB();
+  logActivity("Blacklist", `Quick blacklisted number: ${phone}`);
+  renderCustomers();
+  runManualFraudCheck();
+  toast("নম্বরটি সফলভাবে ব্ল্যাকলিস্টে যুক্ত হয়েছে");
+}
+
+function openNewOrderWithPhone(phone) {
+  openNewOrderModal();
+  const pInput = document.getElementById("f-order-phone");
+  if (pInput) {
+    pInput.value = phone;
+    evaluateCustomerRisk(phone);
   }
 }
 
@@ -607,7 +690,7 @@ function checkOrderPhoneFraudAPI() {
 
 /* =======================================================================
    ONE-CLICK WHATSAPP NOTIFICATION
-======================================================================= */
+====================================================================== */
 function sendWhatsAppOrderAlert(id) {
   const o = DB.orders.find(x => x.id === id);
   if (!o) return;
