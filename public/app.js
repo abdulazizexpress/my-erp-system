@@ -501,6 +501,7 @@ async function fetchLiveFraudDataFromAPI(phone) {
           
           // এখানে সব ধরনের ক্যানসেল, রিটার্ন বা ফেইলিওরের কী (Key) চেক করা হচ্ছে
           c = Number(
+            found.cancelled_parcel || 
             found.cancelled_parcels || 
             found.returned_parcels || 
             found.cancelled || 
@@ -509,10 +510,7 @@ async function fetchLiveFraudDataFromAPI(phone) {
             found.returned || 
             found.return || 
             found.failed || 
-            found.fail || 
-            found.holding || 
-            found.hold || 
-            found.pending || 0
+            found.fail || 0
           );
 
           // যদি টোটাল থেকে সাকসেস বাদ দিলে ক্যানসেল থাকে কিন্তু API সরাসরি না দেয়, তবে অটো হিসাব করবে
