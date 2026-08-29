@@ -561,12 +561,12 @@ async function runManualFraudCheck() {
 
   // কুরিয়ার লোগো ম্যাপিং
   const logoMap = {
-    "SteadFast": "https://app.courier.com.bd/images/couriers/steadfast.png",
-    "Pathao": "https://app.courier.com.bd/images/couriers/pathao.png",
-    "Courier Fast": "https://app.courier.com.bd/images/couriers/courierfast.png",
-    "REDX": "https://app.courier.com.bd/images/couriers/redx.png",
-    "PaperFly": "https://app.courier.com.bd/images/couriers/paperfly.png",
-    "CarryBee": "https://app.courier.com.bd/images/couriers/carrybee.png"
+    "SteadFast": "https://api.bdcourier.com/c-logo/steadfast-logo.png",
+    "Pathao": "https://api.bdcourier.com/c-logo/pathao-logo.png",
+    "Courier Fast": "https://api.bdcourier.com/c-logo/courierfast-logo.png",
+    "REDX": "https://api.bdcourier.com/c-logo/redx-logo.png",
+    "PaperFly": "https://api.bdcourier.com/c-logo/paperfly-logo.png",
+    "CarryBee": "https://api.bdcourier.com/c-logo/carrybee-logo.webp"
   };
 
   // পাই-চার্ট গ্রাফের জন্য পার্সেন্টেজ হিসাব
