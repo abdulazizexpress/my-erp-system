@@ -264,31 +264,32 @@
       </div>
     </section>
 
-    <!-- FRAUD CHECKER -->
-    <section class="view" id="view-fraud-checker">
-      <div class="topbar">
-        <div>
-          <h1 id="view-title-fraud-checker"><i class="fa-solid fa-shield-halved text-rose-600"></i> Live Courier & Delivery Fraud Checker</h1>
-          <div class="desc">সকল কুরিয়ারের হিস্টোরি থেকে কাস্টমারের রিয়েল-টাইম ডেলিভারি সাকসেস ও রিটার্ন রেট যাচাই করুন</div>
-        </div>
-      </div>
+    <!-- LIVE FRAUD CHECKER (API) -->
+<section class="view" id="view-fraud-checker">
+  <div class="topbar">
+    <div>
+      <h1 id="view-title-fraud-checker"><i class="fa-solid fa-shield-halved text-rose-600"></i> Live Courier & Delivery Fraud Checker</h1>
+      <div class="desc">সকল কুরিয়ারের হিস্টোরি থেকে কাস্টমারের রিয়েল-টাইম ডেলিভারি সাকসেস ও রিটার্ন রেট যাচাই করুন</div>
+    </div>
+  </div>
 
-      <div class="card" style="margin-bottom:16px; background:var(--surface);">
-        <h3 style="margin-bottom:10px; font-size:14px;"><i class="fa-solid fa-magnifying-glass"></i> কাস্টমার নম্বর চেক করুন</h3>
-        <div class="row" style="align-items:flex-end;">
-          <div class="field" style="flex:2; min-width:260px;">
-            <label>মোবাইল নম্বর (১১ ডিজিট)</label>
-            <input type="text" id="fraud-search-phone" placeholder="017XXXXXXXX" onpaste="setTimeout(() => formatAndValidateFraudPhone(this), 10)" oninput="formatAndValidateFraudPhone(this)" style="font-size:15px; font-weight:700;">
-            <div id="fraud-phone-error" style="color: #dc2626; font-size: 11.5px; font-weight: 700; margin-top: 4px; display: none;">⚠️ সম্পূর্ণ ১১ ডিজিটের নাম্বার বসান</div>
-          </div>
-          <div class="field" style="flex:0;">
-            <button class="btn" style="height:36px; padding:0 20px;" onclick="runManualFraudCheck()"><i class="fa-solid fa-bolt"></i> Check Fraud Score</button>
-          </div>
-        </div>
+  <div class="card" style="margin-bottom:16px; background:var(--surface);">
+    <h3 style="margin-bottom:10px; font-size:14px;"><i class="fa-solid fa-magnifying-glass"></i> কাস্টমার নম্বর চেক করুন</h3>
+    <div class="row" style="align-items:flex-end;">
+      <div class="field" style="flex:2; min-width:260px;">
+        <label>মোবাইল নম্বর (১১ ডিজিট)</label>
+        <input type="text" id="fraud-search-phone" placeholder="017XXXXXXXX" onpaste="setTimeout(() => formatAndValidateFraudPhone(this), 10)" oninput="formatAndValidateFraudPhone(this)" style="font-size:15px; font-weight:700;">
+        <div id="fraud-phone-error" style="color: #dc2626; font-size: 11.5px; font-weight: 700; margin-top: 4px; display: none;">⚠️ সম্পূর্ণ ১১ ডিজিটের নাম্বার বসান</div>
       </div>
+      <div class="field" style="flex:0;">
+        <button class="btn" style="height:36px; padding:0 20px;" onclick="runManualFraudCheck()"><i class="fa-solid fa-bolt"></i> Check Fraud Score</button>
+      </div>
+    </div>
+  </div>
 
-      <div id="fraud-result-container" style="display:none;"></div>
-    </section>
+  <!-- Live Result Display Container -->
+  <div id="fraud-result-container" style="display:none;"></div>
+</section>
 
     <!-- ORDERS -->
     <section class="view active" id="view-orders">
