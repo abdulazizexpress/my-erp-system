@@ -439,43 +439,96 @@ function formatAndValidateFraudPhone(input) {
    LIVE FRAUD API FETCHER & MANUAL CHECKER
 ======================================================================= */
 async function fetchLiveFraudDataFromAPI(phone) {
-  const fraudConfig = (DB.settings && DB.settings.fraudCheckerApi) || {};
-  const apiUrl = fraudConfig.apiUrl || "https://api.bdcourier.com/courier-check";
-  const apiKey = fraudConfig.apiKey || "";
+  const cleanPhone = phone.trim().replace(/[^0-9]/g, "");
+  const hardcodedKey = "rlPhB2yDqwi1EOJQ4z42GwdfAVyEBTXqt65lUFz1nYjAdWAQr5n80YwwBCT4";
+  const savedKey = (DB.settings && DB.settings.fraudCheckerApi && DB.settings.fraudCheckerApi.apiKey)
+    ? DB.settings.fraudCheckerApi.apiKey.trim()
+    : hardcodedKey;
 
-  if (apiUrl && apiKey) {
-    try {
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-          "api-key": apiKey
-        },
-        body: JSON.stringify({ phone: phone })
+  try {
+    const response = await fetch("/api/check-fraud-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: cleanPhone, apiKey: savedKey })
+    });
+
+    if (response.ok) {
+      const resJson = await response.json();
+      const root = resJson.data || resJson.result || resJson;
+
+      const couriersList = [
+        { name: "SteadFast", keys: ["steadfast", "stead_fast"] },
+        { name: "Pathao", keys: ["pathao"] },
+        { name: "Courier Fast", keys: ["courierfast", "courier_fast"] },
+        { name: "REDX", keys: ["redx"] },
+        { name: "PaperFly", keys: ["paperfly", "paper_fly"] },
+        { name: "CarryBee", keys: ["carrybee", "carry_bee"] }
+      ];
+
+      let tableRows = [];
+      let totalOrders = 0;
+      let totalSuccess = 0;
+      let totalCancel = 0;
+
+      couriersList.forEach(item => {
+        let found = null;
+        for (let k of item.keys) {
+          if (root[k] !== undefined) { found = root[k]; break; }
+        }
+
+        if (!found && Array.isArray(root)) {
+          found = root.find(x => item.keys.some(k => (x.name || x.courier || "").toLowerCase().includes(k)));
+        }
+
+        let t = 0, s = 0, c = 0;
+        if (found && typeof found === "object") {
+          t = Number(found.total_parcels || found.total_orders || found.total || found.total_parcel || 0);
+          s = Number(found.success_parcels || found.delivered_parcels || found.delivered || found.success || found.success_parcel || 0);
+          c = Number(found.cancelled_parcels || found.returned_parcels || found.cancelled || found.cancel || found.cancel_parcel || 0);
+        }
+
+        totalOrders += t;
+        totalSuccess += s;
+        totalCancel += c;
+
+        tableRows.push({ name: item.name, total: t, success: s, cancel: c });
       });
-      if (res.ok) {
-        const json = await res.json();
-        return {
-          total: json.total_parcel || json.total || json.orders || 0,
-          success: json.success_parcel || json.success || json.delivered || 0,
-          cancel: json.cancelled_parcel || json.cancel || json.returned || 0,
-          source: "Live API"
-        };
-      }
-    } catch (e) {
-      console.warn("API request fallback to internal database:", e);
+
+      const rawTotal = root.total_parcels || root.total_orders || root.total || resJson.total_parcels || resJson.total;
+      const rawSuccess = root.success_parcels || root.delivered_parcels || root.delivered || root.success || resJson.success_parcels || resJson.success;
+      const rawCancel = root.cancelled_parcels || root.returned_parcels || root.cancelled || root.cancel || resJson.cancelled_parcels || resJson.cancel;
+
+      if (rawTotal !== undefined) totalOrders = Number(rawTotal);
+      if (rawSuccess !== undefined) totalSuccess = Number(rawSuccess);
+      if (rawCancel !== undefined) totalCancel = Number(rawCancel);
+
+      return {
+        total: totalOrders,
+        success: totalSuccess,
+        cancel: totalCancel,
+        couriers: tableRows,
+        source: "Live BD Courier API",
+        isSuccess: true
+      };
     }
+  } catch (e) {
+    console.error("API Error:", e);
   }
 
-  // Fallback to internal database metrics
-  const cleanPhone = phone.trim();
-  const pastOrders = DB.orders.filter(o => o.phone.trim() === cleanPhone);
-  const total = pastOrders.length;
-  const success = pastOrders.filter(o => o.status === "delivered").length;
-  const cancel = pastOrders.filter(o => o.status === "returned" || o.status === "cancelled").length;
-
-  return { total, success, cancel, source: "Internal DB" };
+  // যদি কোনো কারণে এক্সটার্নাল এপিআই ফেইল করে তবেই নিচের ফলব্যাক কাজ করবে
+  return {
+    total: 0, success: 0, cancel: 0,
+    couriers: [
+      { name: "SteadFast", total: 0, success: 0, cancel: 0 },
+      { name: "Pathao", total: 0, success: 0, cancel: 0 },
+      { name: "Courier Fast", total: 0, success: 0, cancel: 0 },
+      { name: "REDX", total: 0, success: 0, cancel: 0 },
+      { name: "PaperFly", total: 0, success: 0, cancel: 0 },
+      { name: "CarryBee", total: 0, success: 0, cancel: 0 }
+    ],
+    source: "API Error",
+    isSuccess: false
+  };
 }
 
 async function runManualFraudCheck() {
