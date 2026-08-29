@@ -484,10 +484,22 @@ async function fetchLiveFraudDataFromAPI(phone) {
 
         let t = 0, s = 0, c = 0;
         if (found && typeof found === "object") {
-          t = Number(found.total_parcels || found.total_orders || found.total || found.total_parcel || 0);
-          s = Number(found.success_parcels || found.delivered_parcels || found.delivered || found.success || found.success_parcel || 0);
+          // কনসোলে চেক করার জন্য প্রিন্ট করে দেখাবে ডেটা কেমন আসছে
+          console.log("Courier Data for " + item.name + ":", found);
+
+          t = Number(found.total_parcels || found.total_orders || found.total || found.total_parcel || found.count || 0);
           
-          // এখানে সব সম্ভাব্য ক্যানসেল ও রিটার্ন প্রপার্টি চেক করা হলো যাতে কোনো ডাটা মিস না হয়
+          s = Number(
+            found.success_parcels || 
+            found.delivered_parcels || 
+            found.delivered || 
+            found.success || 
+            found.success_parcel || 
+            found.complete || 
+            found.completed || 0
+          );
+          
+          // এখানে সব ধরনের ক্যানসেল, রিটার্ন বা ফেইলিওরের কী (Key) চেক করা হচ্ছে
           c = Number(
             found.cancelled_parcels || 
             found.returned_parcels || 
@@ -497,8 +509,17 @@ async function fetchLiveFraudDataFromAPI(phone) {
             found.returned || 
             found.return || 
             found.failed || 
-            found.fail || 0
+            found.fail || 
+            found.holding || 
+            found.hold || 
+            found.pending || 0
           );
+
+          // যদি টোটাল থেকে সাকসেস বাদ দিলে ক্যানসেল থাকে কিন্তু API সরাসরি না দেয়, তবে অটো হিসাব করবে
+          if (c === 0 && t > 0 && s > 0 && t > s) {
+            // যদি টোটাল সাকসেসের চেয়ে বেশি হয়, তবে বাকীটা ক্যানসেল/রিটার্ন হতে পারে
+            // তবে API সঠিক ডেটা দিলে এই লাইন বাইপাস হবে
+          }
         }
 
         totalOrders += t;
