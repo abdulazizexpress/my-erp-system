@@ -486,7 +486,19 @@ async function fetchLiveFraudDataFromAPI(phone) {
         if (found && typeof found === "object") {
           t = Number(found.total_parcels || found.total_orders || found.total || found.total_parcel || 0);
           s = Number(found.success_parcels || found.delivered_parcels || found.delivered || found.success || found.success_parcel || 0);
-          c = Number(found.cancelled_parcels || found.returned_parcels || found.cancelled || found.cancel || found.cancel_parcel || found.returned || found.return || 0);
+          
+          // এখানে সব সম্ভাব্য ক্যানসেল ও রিটার্ন প্রপার্টি চেক করা হলো যাতে কোনো ডাটা মিস না হয়
+          c = Number(
+            found.cancelled_parcels || 
+            found.returned_parcels || 
+            found.cancelled || 
+            found.cancel || 
+            found.cancel_parcel || 
+            found.returned || 
+            found.return || 
+            found.failed || 
+            found.fail || 0
+          );
         }
 
         totalOrders += t;
@@ -498,7 +510,7 @@ async function fetchLiveFraudDataFromAPI(phone) {
 
       const rawTotal = root.total_parcels || root.total_orders || root.total || resJson.total_parcels || resJson.total;
       const rawSuccess = root.success_parcels || root.delivered_parcels || root.delivered || root.success || resJson.success_parcels || resJson.success;
-      const rawCancel = root.cancelled_parcels || root.returned_parcels || root.cancelled || root.cancel || root.returned || resJson.cancelled_parcels || resJson.cancel;
+      const rawCancel = root.cancelled_parcels || root.returned_parcels || root.cancelled || root.cancel || root.returned || root.return || root.failed || resJson.cancelled_parcels || resJson.cancel;
 
       if (rawTotal !== undefined) totalOrders = Number(rawTotal);
       if (rawSuccess !== undefined) totalSuccess = Number(rawSuccess);
