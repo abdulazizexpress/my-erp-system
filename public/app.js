@@ -175,7 +175,7 @@ function money(n) {
 function toast(msg) {
   const wrap = document.getElementById("toast-wrap");
   if (!wrap) return;
-  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  const t = document.createElement("div"); t.textContent = msg;
   wrap.appendChild(t); setTimeout(() => t.remove(), 2500);
 }
 
@@ -462,7 +462,9 @@ async function fetchLiveFraudDataFromAPI(phone) {
         { name: "Courier Fast", keys: ["courierfast", "courier_fast"] },
         { name: "REDX", keys: ["redx"] },
         { name: "PaperFly", keys: ["paperfly", "paper_fly"] },
-        { name: "CarryBee", keys: ["carrybee", "carry_bee"] }
+        { name: "CarryBee", keys: ["carrybee", "carry_bee"] },
+        { name: "Sundarban", keys: ["sundarban"] },
+        { name: "SA Paribahan", keys: ["sa_paribahan", "saparibahan"] }
       ];
 
       let tableRows = [];
@@ -484,7 +486,7 @@ async function fetchLiveFraudDataFromAPI(phone) {
         if (found && typeof found === "object") {
           t = Number(found.total_parcels || found.total_orders || found.total || found.total_parcel || 0);
           s = Number(found.success_parcels || found.delivered_parcels || found.delivered || found.success || found.success_parcel || 0);
-          c = Number(found.cancelled_parcels || found.returned_parcels || found.cancelled || found.cancel || found.cancel_parcel || 0);
+          c = Number(found.cancelled_parcels || found.returned_parcels || found.cancelled || found.cancel || found.cancel_parcel || found.returned || found.return || 0);
         }
 
         totalOrders += t;
@@ -496,7 +498,7 @@ async function fetchLiveFraudDataFromAPI(phone) {
 
       const rawTotal = root.total_parcels || root.total_orders || root.total || resJson.total_parcels || resJson.total;
       const rawSuccess = root.success_parcels || root.delivered_parcels || root.delivered || root.success || resJson.success_parcels || resJson.success;
-      const rawCancel = root.cancelled_parcels || root.returned_parcels || root.cancelled || root.cancel || resJson.cancelled_parcels || resJson.cancel;
+      const rawCancel = root.cancelled_parcels || root.returned_parcels || root.cancelled || root.cancel || root.returned || resJson.cancelled_parcels || resJson.cancel;
 
       if (rawTotal !== undefined) totalOrders = Number(rawTotal);
       if (rawSuccess !== undefined) totalSuccess = Number(rawSuccess);
@@ -515,20 +517,7 @@ async function fetchLiveFraudDataFromAPI(phone) {
     console.error("API Error:", e);
   }
 
-  // যদি কোনো কারণে এক্সটার্নাল এপিআই ফেইল করে তবেই নিচের ফলব্যাক কাজ করবে
-  return {
-    total: 0, success: 0, cancel: 0,
-    couriers: [
-      { name: "SteadFast", total: 0, success: 0, cancel: 0 },
-      { name: "Pathao", total: 0, success: 0, cancel: 0 },
-      { name: "Courier Fast", total: 0, success: 0, cancel: 0 },
-      { name: "REDX", total: 0, success: 0, cancel: 0 },
-      { name: "PaperFly", total: 0, success: 0, cancel: 0 },
-      { name: "CarryBee", total: 0, success: 0, cancel: 0 }
-    ],
-    source: "API Error",
-    isSuccess: false
-  };
+  return { total: 0, success: 0, cancel: 0, couriers: [], source: "API Error", isSuccess: false };
 }
 
 async function runManualFraudCheck() {
@@ -553,30 +542,35 @@ async function runManualFraudCheck() {
   const data = await fetchLiveFraudDataFromAPI(phone);
 
   const total = data.total;
-  const successRate = total > 0 ? ((data.success / total) * 100).toFixed(1) : "100.0";
-  const cancelRate = total > 0 ? ((data.cancel / total) * 100).toFixed(1) : "0.0";
+  const success = data.success;
+  const cancel = data.cancel;
+  const successRate = total > 0 ? ((success / total) * 100).toFixed(1) : "100.0";
+  const cancelRate = total > 0 ? ((cancel / total) * 100).toFixed(1) : "0.0";
 
   let statusTitle = "Safe";
   let statusSubtitle = `Strong delivery success rate (${successRate}%)`;
   let alertBg = "#dcfce7";
   let alertColor = "#16a34a";
 
-  if (isBlacklisted) {
-    statusTitle = "High Risk (Blacklisted)";
-    statusSubtitle = "এই নম্বরটি ফ্রড ব্ল্যাকলিস্টে রয়েছে!";
-    alertBg = "#fee2e2";
-    alertColor = "#dc2626";
-  } else if (total > 0 && Number(cancelRate) >= 40) {
+  if (isBlacklisted || (total > 0 && Number(cancelRate) >= 40)) {
     statusTitle = "High Risk";
-    statusSubtitle = `High return rate detected (${cancelRate}%)`;
+    statusSubtitle = isBlacklisted ? "এই নম্বরটি ফ্রড ব্ল্যাকলিস্টে রয়েছে!" : `High return rate detected (${cancelRate}%)`;
     alertBg = "#fee2e2";
     alertColor = "#dc2626";
-  } else if (total > 0 && Number(cancelRate) > 15) {
-    statusTitle = "Moderate Risk";
-    statusSubtitle = `Moderate cancel rate (${cancelRate}%)`;
-    alertBg = "#fef3c7";
-    alertColor = "#d97706";
   }
+
+  // কুরিয়ার লোগো ম্যাপিং
+  const logoMap = {
+    "SteadFast": "https://app.courier.com.bd/images/couriers/steadfast.png",
+    "Pathao": "https://app.courier.com.bd/images/couriers/pathao.png",
+    "Courier Fast": "https://app.courier.com.bd/images/couriers/courierfast.png",
+    "REDX": "https://app.courier.com.bd/images/couriers/redx.png",
+    "PaperFly": "https://app.courier.com.bd/images/couriers/paperfly.png",
+    "CarryBee": "https://app.courier.com.bd/images/couriers/carrybee.png"
+  };
+
+  // পাই-চার্ট গ্রাফের জন্য পার্সেন্টেজ হিসাব
+  const succDeg = total > 0 ? (success / total) * 360 : 0;
 
   resContainer.innerHTML = `
     <div style="background:${alertBg}; color:${alertColor}; border:1px solid ${alertColor}; padding:12px 16px; border-radius:10px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
@@ -584,7 +578,7 @@ async function runManualFraudCheck() {
         <div style="font-size:16px; font-weight:800;"><i class="fa-solid fa-shield-halved"></i> ${statusTitle}</div>
         <div style="font-size:12px; margin-top:2px;">• ${statusSubtitle}</div>
       </div>
-      <span class="badge ${data.isSuccess ? 'b-delivered' : 'b-pending'}" style="font-size:11px;">${data.source}</span>
+      <span class="badge ${data.isSuccess ? 'b-delivered' : 'b-pending'}" style="font-size:11px;">Live BD Courier API</span>
     </div>
 
     <div class="grid g-4" style="margin-bottom:16px;">
@@ -595,50 +589,66 @@ async function runManualFraudCheck() {
       </div>
       <div class="card" style="text-align:center; padding:14px;">
         <div class="label muted" style="font-size:11.5px; font-weight:700;">Successful</div>
-        <div class="value" style="font-size:26px; font-weight:900; color:var(--green); margin-top:4px;">${data.success}</div>
+        <div class="value" style="font-size:26px; font-weight:900; color:var(--green); margin-top:4px;">${success}</div>
         <div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">Delivered</div>
       </div>
       <div class="card" style="text-align:center; padding:14px;">
         <div class="label muted" style="font-size:11.5px; font-weight:700;">Cancelled</div>
-        <div class="value" style="font-size:26px; font-weight:900; color:var(--red); margin-top:4px;">${data.cancel}</div>
+        <div class="value" style="font-size:26px; font-weight:900; color:var(--red); margin-top:4px;">${cancel}</div>
         <div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">Failed / Returned</div>
       </div>
       <div class="card" style="text-align:center; padding:14px;">
         <div class="label muted" style="font-size:11.5px; font-weight:700;">Success Rate</div>
         <div class="value" style="font-size:26px; font-weight:900; color:var(--purple); margin-top:4px;">${successRate}%</div>
-        <div class="rev-progress-track" style="height:6px; margin-top:6px;">
-          <div class="rev-fill bg-emerald-500" style="width:${successRate}%;"></div>
-        </div>
       </div>
     </div>
 
-    <div class="card" style="padding:0; overflow:hidden; margin-bottom:14px;">
-      <table style="width:100%; border-collapse:collapse;">
-        <thead>
-          <tr style="background:var(--surface-2);">
-            <th style="padding:10px 14px;">COURIER</th>
-            <th class="num" style="padding:10px 14px;">TOTAL</th>
-            <th class="num text-emerald-600" style="padding:10px 14px;">SUCCESS</th>
-            <th class="num text-rose-600" style="padding:10px 14px;">CANCEL</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${(data.couriers || []).map(c => `
-            <tr>
-              <td style="padding:10px 14px; font-weight:700;">${c.name}</td>
-              <td class="num mono" style="padding:10px 14px; font-weight:800;">${c.total}</td>
-              <td class="num mono text-emerald-600" style="padding:10px 14px; font-weight:800;">${c.success}</td>
-              <td class="num mono text-rose-600" style="padding:10px 14px; font-weight:800;">${c.cancel}</td>
+    <div class="grid g-2" style="grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px;">
+      <!-- Table with Logos -->
+      <div class="card" style="padding:0; overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--surface-2);">
+              <th style="padding:10px 14px;">COURIER</th>
+              <th class="num" style="padding:10px 14px;">TOTAL</th>
+              <th class="num text-emerald-600" style="padding:10px 14px;">SUCCESS</th>
+              <th class="num text-rose-600" style="padding:10px 14px;">CANCEL</th>
             </tr>
-          `).join("")}
-          <tr style="background:var(--surface-2); font-weight:900;">
-            <td style="padding:10px 14px;">Total</td>
-            <td class="num mono" style="padding:10px 14px;">${total}</td>
-            <td class="num mono text-emerald-600" style="padding:10px 14px;">${data.success}</td>
-            <td class="num mono text-rose-600" style="padding:10px 14px;">${data.cancel}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${(data.couriers || []).map(c => `
+              <tr>
+                <td style="padding:10px 14px; font-weight:700; display:flex; align-items:center; gap:8px;">
+                  ${logoMap[c.name] ? `<img src="${logoMap[c.name]}" alt="${c.name}" style="height:20px; object-fit:contain;">` : c.name}
+                </td>
+                <td class="num mono" style="padding:10px 14px; font-weight:800;">${c.total}</td>
+                <td class="num mono text-emerald-600" style="padding:10px 14px; font-weight:800;">${c.success}</td>
+                <td class="num mono text-rose-600" style="padding:10px 14px; font-weight:800;">${c.cancel}</td>
+              </tr>
+            `).join("")}
+            <tr style="background:var(--surface-2); font-weight:900;">
+              <td style="padding:10px 14px;">Total</td>
+              <td class="num mono" style="padding:10px 14px;">${total}</td>
+              <td class="num mono text-emerald-600" style="padding:10px 14px;">${success}</td>
+              <td class="num mono text-rose-600" style="padding:10px 14px;">${cancel}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pie Chart Graph -->
+      <div class="card" style="text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px;">
+        <h4 style="font-size:13px; margin-bottom:10px;">Delivery Status</h4>
+        <div style="width: 110px; height: 110px; border-radius: 50%; background: conic-gradient(#16a34a 0deg ${succDeg}deg, #dc2626 ${succDeg}deg 360deg); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);">
+          <div style="width: 75px; height: 75px; background: var(--surface); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;">
+            ${successRate}%
+          </div>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:10px; font-size:11px;">
+          <span><span style="color:#16a34a; font-weight:bold;">■</span> Successful (${success})</span>
+          <span><span style="color:#dc2626; font-weight:bold;">■</span> Cancel (${cancel})</span>
+        </div>
+      </div>
     </div>
 
     <div style="display:flex; gap:8px;">
@@ -690,7 +700,7 @@ function checkOrderPhoneFraudAPI() {
 
 /* =======================================================================
    ONE-CLICK WHATSAPP NOTIFICATION
-====================================================================== */
+======================================================================= */
 function sendWhatsAppOrderAlert(id) {
   const o = DB.orders.find(x => x.id === id);
   if (!o) return;
